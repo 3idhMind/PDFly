@@ -1,0 +1,22 @@
+project_id = "nlnqpcfezbssssrwddyl"
+
+[functions.generate-pdf]
+verify_jwt = false
+
+[functions.get-documents]
+verify_jwt = false
+
+[functions.cleanup-documents]
+verify_jwt = false
+
+[functions.notify-feedback]
+verify_jwt = false
+
+[functions.health-check]
+verify_jwt = false
+
+[functions.auth-health-check]
+verify_jwt = false
+
+[functions.images-to-pdf]
+verify_jwt = false
