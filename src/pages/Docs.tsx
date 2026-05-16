@@ -256,6 +256,22 @@ const Docs = () => {
               </p>
             </div>
 
+            {/* Server-side notice */}
+            <Card className="p-5 mb-6 border-accent/30 bg-accent/5">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-accent/10 shrink-0">
+                  <Code className="w-4 h-4 text-accent" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground text-sm">⚙️ The REST API runs server-side</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Required for programmatic access from servers, scripts, and automations. PDFs generated via the API are temporarily stored for 30 minutes so you can download them, then auto-deleted. Need full privacy with zero upload? Use the{" "}
+                    <Link to="/app" className="text-primary hover:underline">Web UI</Link> — it runs 100% in your browser.
+                  </p>
+                </div>
+              </div>
+            </Card>
+
             {/* ===== 1. QUICK START ===== */}
             <Card id="quickstart" className="p-6 mb-6">
               <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">

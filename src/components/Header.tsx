@@ -1,9 +1,10 @@
-import { FileText, Settings, BookOpen, LogIn, LogOut, TrendingUp, Menu, X, DollarSign, Activity, Newspaper, ImagePlus } from "lucide-react";
+import { FileText, Settings, BookOpen, LogIn, LogOut, Menu, X, DollarSign, Newspaper, ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { motion, AnimatePresence } from "framer-motion";
 import type { User } from "@supabase/supabase-js";
 
@@ -46,8 +47,11 @@ export const Header = () => {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
+          <Link to="/create" className={navLinkClass}>
+            <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Create</span>
+          </Link>
           <Link to="/app" className={navLinkClass}>
-            <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Generator</span>
+            <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Text to PDF</span>
           </Link>
           <Link to="/images-to-pdf" className={navLinkClass}>
             <span className="flex items-center gap-1.5"><ImagePlus className="w-3.5 h-3.5" /> Images to PDF</span>
@@ -61,21 +65,9 @@ export const Header = () => {
           <Link to="/blog" className={navLinkClass}>
             <span className="flex items-center gap-1.5"><Newspaper className="w-3.5 h-3.5" /> Blog</span>
           </Link>
-          {user && (
-            <>
-              <Link to="/analytics" className={navLinkClass}>
-                <span className="flex items-center gap-1.5"><TrendingUp className="w-3.5 h-3.5" /> Analytics</span>
-              </Link>
-              <Link to="/settings" className={navLinkClass}>
-                <span className="flex items-center gap-1.5"><Settings className="w-3.5 h-3.5" /> Settings</span>
-              </Link>
-            </>
-          )}
           <div className="w-px h-6 bg-border mx-1" />
           {user ? (
-            <Button variant="outline" size="sm" onClick={handleLogout} className="ml-1">
-              <LogOut className="w-3.5 h-3.5 mr-1.5" /> Logout
-            </Button>
+            <ProfileMenu user={user} />
           ) : (
             <Button size="sm" asChild className="ml-1 shadow-sm">
               <Link to="/auth"><LogIn className="w-3.5 h-3.5 mr-1.5" /> Sign In</Link>
@@ -104,8 +96,11 @@ export const Header = () => {
             className="md:hidden border-t border-border bg-card overflow-hidden"
           >
             <div className="px-4 py-4 space-y-1">
+              <Link to="/create" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
+                <FileText className="w-4 h-4 text-primary" /> Create
+              </Link>
               <Link to="/app" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <FileText className="w-4 h-4 text-primary" /> PDF Generator
+                <FileText className="w-4 h-4 text-primary" /> Text to PDF
               </Link>
               <Link to="/images-to-pdf" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
                 <ImagePlus className="w-4 h-4 text-primary" /> Images to PDF
@@ -119,23 +114,20 @@ export const Header = () => {
               <Link to="/blog" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
                 <Newspaper className="w-4 h-4 text-primary" /> Blog
               </Link>
-              <Link to="/status" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <Activity className="w-4 h-4 text-primary" /> Status
-              </Link>
               {user && (
-                <>
-                  <Link to="/analytics" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                    <TrendingUp className="w-4 h-4 text-primary" /> Analytics
-                  </Link>
-                  <Link to="/settings" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                    <Settings className="w-4 h-4 text-primary" /> Settings
-                  </Link>
-                </>
+                <Link to="/settings" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
+                  <Settings className="w-4 h-4 text-primary" /> Profile & Settings
+                </Link>
               )}
               <div className="pt-2 border-t border-border">
                 {user ? (
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => { handleLogout(); closeMenu(); }}>
-                    <LogOut className="w-4 h-4 mr-2" /> Logout
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground/70 text-xs"
+                    onClick={() => { handleLogout(); closeMenu(); }}
+                  >
+                    <LogOut className="w-3.5 h-3.5 mr-2 opacity-60" /> Sign out
                   </Button>
                 ) : (
                   <Button size="sm" className="w-full" asChild onClick={closeMenu}>

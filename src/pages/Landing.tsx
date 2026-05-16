@@ -102,7 +102,7 @@ const Landing = () => {
     { value: 70, suffix: "+", label: "Languages" },
     { value: 25, suffix: "+", label: "Image Formats" },
     { value: 15, suffix: "", label: "Templates" },
-    { value: 10, suffix: "K+", label: "PDFs Generated" },
+    { value: 100, suffix: "%", label: "Free & Private" },
   ];
 
   return (

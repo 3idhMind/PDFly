@@ -95,9 +95,12 @@ const Settings = () => {
   };
 
   const loadRecentDocs = async () => {
+    // Only show docs within the 30-minute retention window
+    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
     const { data } = await supabase
       .from("generated_documents")
       .select("id, title, template, language, page_size, size_bytes, storage_path, created_at")
+      .gte("created_at", cutoff)
       .order("created_at", { ascending: false })
       .limit(20);
     if (data) setRecentDocs(data as RecentDoc[]);
@@ -167,9 +170,9 @@ const Settings = () => {
     }
     const { data, error } = await supabase.storage
       .from("generated-pdfs")
-      .createSignedUrl(doc.storage_path, 3600);
+      .createSignedUrl(doc.storage_path, 1800);
     if (error || !data?.signedUrl) {
-      toast({ title: "Error", description: "Failed to generate download URL", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to generate download URL (file may have expired)", variant: "destructive" });
       return;
     }
     window.open(data.signedUrl, "_blank");
@@ -266,32 +269,52 @@ const Settings = () => {
 
         {/* Recent Documents */}
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" /> Recent Documents
-          </h2>
-          <p className="text-xs text-muted-foreground mb-4">Documents are archived after 1 hour via webhook and then removed. Below are your most recent generations.</p>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" /> Recent Documents
+            </h2>
+            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+              30-min retention
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Only PDFs generated via the <strong>REST API</strong> appear here. Web UI generations are 100% client-side and are never uploaded or stored on our servers. Documents shown below are auto-deleted from our database after 30 minutes — we cannot restore anything.
+          </p>
           {recentDocs.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No documents generated yet.</p>
+            <div className="text-center py-10 border border-dashed border-border rounded-lg">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+              <p className="text-muted-foreground text-sm">No active API-generated documents.</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Web UI generations stay private on your device and won't appear here.</p>
+            </div>
           ) : (
-             <div className="space-y-2">
-              {recentDocs.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border bg-card text-sm">
-                  <div>
-                    <span className="font-medium text-foreground">{doc.title}</span>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {doc.template} · {doc.language} · {doc.page_size} · {formatBytes(doc.size_bytes)}
+            <div className="space-y-2">
+              {recentDocs.map((doc) => {
+                const ageMs = Date.now() - new Date(doc.created_at).getTime();
+                const minsLeft = Math.max(0, Math.ceil((30 * 60 * 1000 - ageMs) / 60000));
+                return (
+                  <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors text-sm gap-3">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-foreground truncate block">{doc.title}</span>
+                      <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
+                        <span>{doc.template || "—"}</span>
+                        <span>·</span>
+                        <span>{doc.page_size || "—"}</span>
+                        <span>·</span>
+                        <span>{formatBytes(doc.size_bytes)}</span>
+                        <span>·</span>
+                        <span className={minsLeft <= 5 ? "text-destructive font-medium" : "text-primary"}>
+                          Expires in {minsLeft}m
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
                     {doc.storage_path && (
-                      <Button size="sm" variant="outline" onClick={() => downloadDoc(doc)}>
+                      <Button size="sm" variant="outline" onClick={() => downloadDoc(doc)} className="shrink-0">
                         <Download className="w-3 h-3 mr-1" /> Download
                       </Button>
                     )}
-                    <span className="text-xs text-muted-foreground">{new Date(doc.created_at).toLocaleString()}</span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>

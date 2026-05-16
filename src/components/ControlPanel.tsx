@@ -59,7 +59,7 @@ export const ControlPanel = ({
           className="md:w-auto w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
         >
           <FileDown className="w-5 h-5 mr-2" />
-          Generate PDFs
+          Convert to PDF
         </Button>
       </div>
     </Card>

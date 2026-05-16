@@ -22,6 +22,8 @@ import NotFound from "./pages/NotFound";
 import ImagesToPdf from "./pages/ImagesToPdf";
 import TextToPdfFeature from "./pages/TextToPdfFeature";
 import ImageToPdfFeature from "./pages/ImageToPdfFeature";
+import Create from "./pages/Create";
+import AdminSecurity from "./pages/AdminSecurity";
 
 const queryClient = new QueryClient();
 
@@ -47,9 +49,11 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfService />} />
+              <Route path="/create" element={<Create />} />
               <Route path="/images-to-pdf" element={<ImagesToPdf />} />
               <Route path="/text-to-pdf" element={<TextToPdfFeature />} />
               <Route path="/image-to-pdf" element={<ImageToPdfFeature />} />
+              <Route path="/admin/security" element={<AdminSecurity />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

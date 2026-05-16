@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { formatBytes } from "@/lib/pdfGenerator";
 
 interface SuccessModalProps {
@@ -21,8 +21,16 @@ export const SuccessModal = ({ isOpen, onClose, pdfs }: SuccessModalProps) => {
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          <div className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">
+            <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-foreground">
+              <span className="font-semibold">100% free & private.</span> Generated locally — never uploaded.
+            </span>
+            <Sparkles className="w-3.5 h-3.5 text-primary ml-auto shrink-0" />
+          </div>
+
           <p className="text-muted-foreground text-sm">
-            Your documents have been generated. View, download, or print them from the preview section below.
+            View, download, or print your documents from the preview section below.
           </p>
 
           <div className="bg-secondary/50 rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">

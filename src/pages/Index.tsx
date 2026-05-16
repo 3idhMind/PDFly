@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { InputSection } from "@/components/InputSection";
 import { ControlPanel } from "@/components/ControlPanel";
@@ -11,9 +12,9 @@ import { Footer } from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { DocumentSection } from "@/types/pdf";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { Plus, ShieldCheck, Lock, Wifi, Sparkles } from "lucide-react";
+import { generatePdfsClient } from "@/lib/clientPdfGenerator";
+import { checkFreeGate, consumeFreeGeneration } from "@/lib/freeGenerationGate";
 
 const createDoc = (title = "Untitled Document"): DocumentSection => ({
   id: crypto.randomUUID(),
@@ -34,22 +35,9 @@ const Index = () => {
   const [generatedPdfs, setGeneratedPdfs] = useState<
     Array<{ title: string; url: string; sizeBytes: number }>
   >([]);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session?.user);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsLoggedIn(!!session?.user);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Revoke old blob URLs when PDFs are replaced/unmounted
   useEffect(() => {
@@ -95,10 +83,12 @@ const Index = () => {
       return;
     }
 
-    if (!isLoggedIn) {
+    // Free generation gate — 1 free, then login required
+    const gate = await checkFreeGate();
+    if (!gate.allowed) {
       toast({
-        title: "Login Required",
-        description: "Please log in to generate PDFs",
+        title: "Sign in to keep generating",
+        description: "You've used your free generation. Create a free account to continue — it takes 10 seconds.",
         variant: "destructive",
       });
       navigate("/auth");
@@ -108,64 +98,40 @@ const Index = () => {
     setIsGenerating(true);
     setProgressCurrent(0);
     setProgressTotal(nonEmpty.length);
-    setProgressStage("Sending to server...");
+    setProgressStage("Generating in your browser...");
 
     try {
-      const { data, error } = await supabase.functions.invoke("generate-pdf", {
-        body: {
-          documents: nonEmpty.map((d) => ({ title: d.title, content: d.content })),
-          language,
-          template: selectedTemplate,
-          page_size: pageSize,
+      const pdfs = await generatePdfsClient({
+        documents: nonEmpty,
+        template: selectedTemplate,
+        pageSize,
+        language,
+        onProgress: (current, total, stage) => {
+          setProgressCurrent(current);
+          setProgressTotal(total);
+          setProgressStage(stage);
         },
       });
 
-      if (error) {
-        throw new Error(error.message || "Function invocation failed");
-      }
-
-      if (!data?.success) {
-        throw new Error(data?.message || "PDF generation failed on server");
-      }
-
-      if (Array.isArray((data as any).warnings) && (data as any).warnings.length) {
-        toast({
-          title: "Rendering Notice",
-          description: (data as any).warnings.join(" • "),
-        });
-      }
-
-      setProgressCurrent(nonEmpty.length);
-      setProgressStage("Complete!");
-
-      const pdfs = (data.documents as Array<{
-        title: string;
-        download_url: string;
-        size_bytes: number;
-      }>).map((d) => ({
-        title: d.title.replace(/\.pdf$/, ""),
-        url: d.download_url,
-        sizeBytes: d.size_bytes,
-      }));
-
-      setGeneratedPdfs(pdfs);
+      await consumeFreeGeneration();
+      setGeneratedPdfs(pdfs.map((p) => ({ title: p.title, url: p.url, sizeBytes: p.sizeBytes })));
       setIsGenerating(false);
       setShowSuccess(true);
     } catch (err: unknown) {
-      console.error("PDF generation failed:", err);
+      console.error("Client PDF generation failed:", err);
       setIsGenerating(false);
       const message =
         err instanceof Error ? err.message : "Something went wrong generating your PDFs";
       toast({ title: "Generation Failed", description: message, variant: "destructive" });
     }
-  }, [documents, selectedTemplate, pageSize, language, toast, isLoggedIn, navigate]);
+  }, [documents, selectedTemplate, pageSize, language, toast, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl flex-1">
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-4xl md:text-5xl font-bold font-display text-foreground mb-3">
             <span className="gradient-text">PDFly</span> Generator
           </h1>
@@ -174,8 +140,38 @@ const Index = () => {
           </p>
         </div>
 
+        {/* Privacy badge */}
+        <div className="mb-8 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 p-5">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
+                100% Local · Browser-Only Processing
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                  Zero Upload
+                </span>
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Your text never leaves your device. Nothing is uploaded, stored, or logged. No login required.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1"><Lock className="w-3 h-3 text-primary" /> Zero leak</span>
+                <span className="inline-flex items-center gap-1"><Wifi className="w-3 h-3 text-primary" /> Works offline</span>
+                <span className="inline-flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-primary" /> No account needed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <TemplateSelector selectedTemplate={selectedTemplate} onTemplateChange={setSelectedTemplate} />
 
+        <div className="mb-2 flex justify-end">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-gradient-to-r from-primary/15 to-accent/15 text-primary border border-primary/20">
+            <Sparkles className="w-3 h-3" /> Completely Free · No limits · No watermark
+          </span>
+        </div>
         <ControlPanel
           language={language}
           setLanguage={setLanguage}

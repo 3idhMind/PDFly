@@ -58,6 +58,10 @@ Deno.serve(async (req) => {
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "20"), 100);
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
+    // Retention window: 30 minutes — anything older is considered deleted
+    const retentionCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const SIGNED_URL_TTL = 1800; // 30 minutes
+
     // Single document retrieval
     if (docId) {
       const { data: doc, error: docError } = await supabase
@@ -65,17 +69,18 @@ Deno.serve(async (req) => {
         .select("id, title, template, language, page_size, size_bytes, storage_path, created_at")
         .eq("id", docId)
         .eq("user_id", keyData.user_id)
+        .gte("created_at", retentionCutoff)
         .single();
 
       if (docError || !doc) {
-        return jsonResponse(404, { error: "NOT_FOUND", message: "Document not found" });
+        return jsonResponse(404, { error: "NOT_FOUND", message: "Document not found or expired" });
       }
 
       let download_url: string | null = null;
       if (doc.storage_path) {
         const { data: urlData } = await supabase.storage
           .from("generated-pdfs")
-          .createSignedUrl(doc.storage_path, 3600);
+          .createSignedUrl(doc.storage_path, SIGNED_URL_TTL);
         download_url = urlData?.signedUrl || null;
       }
 
@@ -90,16 +95,17 @@ Deno.serve(async (req) => {
           size_bytes: doc.size_bytes,
           download_url,
           created_at: doc.created_at,
-          expires_in: download_url ? "1 hour" : null,
+          expires_in: download_url ? "30 minutes" : null,
         },
       });
     }
 
-    // List documents
+    // List documents (only within retention window)
     const { data: docs, error: docsError, count } = await supabase
       .from("generated_documents")
       .select("id, title, template, language, page_size, size_bytes, storage_path, created_at", { count: "exact" })
       .eq("user_id", keyData.user_id)
+      .gte("created_at", retentionCutoff)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -114,7 +120,7 @@ Deno.serve(async (req) => {
         if (doc.storage_path) {
           const { data: urlData } = await supabase.storage
             .from("generated-pdfs")
-            .createSignedUrl(doc.storage_path, 3600);
+            .createSignedUrl(doc.storage_path, SIGNED_URL_TTL);
           download_url = urlData?.signedUrl || null;
         }
         return {

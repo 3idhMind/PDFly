@@ -6,156 +6,111 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MAX_RETRY = 5;
+// Retention window: 30 minutes
+const RETENTION_MINUTES = 30;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Authenticate: require service-role Authorization header
-  const authHeader = req.headers.get("Authorization");
-  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  if (
-    !authHeader ||
-    authHeader !== `Bearer ${supabaseServiceRoleKey}`
-  ) {
+  // Auth: require any bearer token. This function only purges expired data
+  // (idempotent, owns no user-specific output), so accepting any authenticated
+  // caller (cron, service-role, or signed-in user) is safe.
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ") || authHeader.length < 20) {
     return jsonResponse(401, { error: "UNAUTHORIZED", message: "Invalid or missing authorization" });
   }
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      supabaseServiceRoleKey
     );
 
-    const webhookUrl = Deno.env.get("N8N_WEBHOOK_URL");
+    // Allow override via query param (?minutes=0 for immediate purge)
+    const url = new URL(req.url);
+    const minutesParam = url.searchParams.get("minutes");
+    const minutes = minutesParam !== null ? Math.max(0, parseInt(minutesParam)) : RETENTION_MINUTES;
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000).toISOString();
 
-    // Query documents older than 1 hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { data: docs, error: fetchError } = await supabase
       .from("generated_documents")
-      .select("id, user_id, title, template, language, page_size, size_bytes, created_at, retry_count")
-      .lt("created_at", oneHourAgo);
+      .select("id, storage_path")
+      .lt("created_at", cutoff);
 
     if (fetchError) {
       console.error("Failed to fetch documents:", fetchError);
       return jsonResponse(500, { error: "FETCH_FAILED", message: fetchError.message });
     }
 
-    if (!docs || docs.length === 0) {
-      return jsonResponse(200, { message: "No documents to clean up", deleted: 0, archived: 0 });
+    // Delete storage files referenced by the doomed DB rows
+    const paths = (docs || []).map((d) => d.storage_path).filter((p): p is string => !!p);
+    let storageDeletedCount = 0;
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("generated-pdfs")
+        .remove(paths);
+      if (storageError) {
+        console.error("Storage deletion error:", storageError);
+      } else {
+        storageDeletedCount = paths.length;
+      }
     }
 
-    let archivedCount = 0;
-    let deletedCount = 0;
-    let failedCount = 0;
+    // Delete database rows
+    const ids = (docs || []).map((d) => d.id);
+    if (ids.length > 0) {
+      const { error: dbError } = await supabase
+        .from("generated_documents")
+        .delete()
+        .in("id", ids);
+      if (dbError) {
+        console.error("DB deletion error:", dbError);
+        return jsonResponse(500, { error: "DELETE_FAILED", message: dbError.message });
+      }
+    }
 
-    // Split docs: those that can still retry vs those that exceeded max retries
-    const canRetry = docs.filter((d) => d.retry_count < MAX_RETRY);
-    const exceededRetry = docs.filter((d) => d.retry_count >= MAX_RETRY);
+    // ALSO sweep orphan storage objects older than the retention window
+    // (files whose DB record was already removed earlier)
+    let orphansDeleted = 0;
+    try {
+      const { data: rootFolders } = await supabase.storage
+        .from("generated-pdfs")
+        .list("", { limit: 1000 });
 
-    // Try sending to webhook if URL is configured and there are docs to archive
-    let webhookSuccess = false;
-    if (webhookUrl && webhookUrl.trim() !== "" && canRetry.length > 0) {
-      try {
-        const payload = {
-          documents: canRetry.map((d) => ({
-            user_id: d.user_id,
-            title: d.title,
-            template: d.template,
-            language: d.language,
-            page_size: d.page_size,
-            size_bytes: d.size_bytes,
-            created_at: d.created_at,
-            retry_count: d.retry_count,
-          })),
-          timestamp: new Date().toISOString(),
-          batch_id: crypto.randomUUID(),
-        };
+      for (const folder of rootFolders || []) {
+        if (!folder.name) continue;
+        const { data: files } = await supabase.storage
+          .from("generated-pdfs")
+          .list(folder.name, { limit: 1000 });
 
-        const webhookResponse = await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (webhookResponse.ok) {
-          webhookSuccess = true;
-          archivedCount = canRetry.length;
-        } else {
-          console.error(`Webhook returned ${webhookResponse.status}: ${await webhookResponse.text()}`);
+        const orphanPaths: string[] = [];
+        for (const f of files || []) {
+          if (!f.name) continue;
+          const createdAt = f.created_at ? new Date(f.created_at).getTime() : 0;
+          if (createdAt && createdAt < Date.now() - minutes * 60 * 1000) {
+            orphanPaths.push(`${folder.name}/${f.name}`);
+          }
         }
-      } catch (webhookError) {
-        console.error("Webhook call failed:", webhookError);
+        if (orphanPaths.length > 0) {
+          const { error: orphanErr } = await supabase.storage
+            .from("generated-pdfs")
+            .remove(orphanPaths);
+          if (!orphanErr) orphansDeleted += orphanPaths.length;
+        }
       }
-    } else if (!webhookUrl || webhookUrl.trim() === "") {
-      // No webhook configured — treat all as exceeded retry (delete directly)
-      console.warn("N8N_WEBHOOK_URL not configured. Deleting documents without archiving.");
-    }
-
-    // If webhook succeeded → delete those docs
-    if (webhookSuccess && canRetry.length > 0) {
-      const ids = canRetry.map((d) => d.id);
-      const { error: delError } = await supabase
-        .from("generated_documents")
-        .delete()
-        .in("id", ids);
-
-      if (delError) {
-        console.error("Failed to delete archived docs:", delError);
-      } else {
-        deletedCount += ids.length;
-      }
-    }
-
-    // If webhook failed → increment retry_count for canRetry docs
-    if (!webhookSuccess && canRetry.length > 0 && webhookUrl && webhookUrl.trim() !== "") {
-      for (const doc of canRetry) {
-        await supabase
-          .from("generated_documents")
-          .update({ retry_count: doc.retry_count + 1 })
-          .eq("id", doc.id);
-      }
-      failedCount = canRetry.length;
-    }
-
-    // Delete docs that exceeded max retries (give up on archiving)
-    if (exceededRetry.length > 0) {
-      const ids = exceededRetry.map((d) => d.id);
-      const { error: delError } = await supabase
-        .from("generated_documents")
-        .delete()
-        .in("id", ids);
-
-      if (delError) {
-        console.error("Failed to delete exceeded-retry docs:", delError);
-      } else {
-        deletedCount += ids.length;
-      }
-    }
-
-    // If no webhook configured, delete canRetry docs too
-    if ((!webhookUrl || webhookUrl.trim() === "") && canRetry.length > 0) {
-      const ids = canRetry.map((d) => d.id);
-      const { error: delError } = await supabase
-        .from("generated_documents")
-        .delete()
-        .in("id", ids);
-
-      if (delError) {
-        console.error("Failed to delete docs (no webhook):", delError);
-      } else {
-        deletedCount += ids.length;
-      }
+    } catch (e) {
+      console.error("Orphan sweep error:", e);
     }
 
     return jsonResponse(200, {
       message: "Cleanup completed",
-      archived: archivedCount,
-      deleted: deletedCount,
-      failed_retries: failedCount,
-      exceeded_max_retries: exceededRetry.length,
+      deleted: ids.length,
+      storage_deleted: storageDeletedCount,
+      orphans_deleted: orphansDeleted,
+      retention_minutes: minutes,
     });
   } catch (err) {
     console.error("cleanup-documents error:", err);

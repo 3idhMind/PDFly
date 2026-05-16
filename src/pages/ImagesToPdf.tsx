@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/hooks/use-toast";
 import {
   Download, FileImage, Loader2, Settings2, RotateCcw, Sparkles,
   CheckCircle, ImagePlus, Layers, Zap, Shield, Monitor
@@ -21,6 +23,7 @@ import {
   type ImageFile, type ConversionOptions, type FitMode, type Orientation, type ImageQuality
 } from "@/lib/imageConverter";
 import { motion } from "framer-motion";
+import { checkFreeGate, consumeFreeGeneration } from "@/lib/freeGenerationGate";
 
 const PAGE_SIZES = ["A4", "A3", "A5", "Letter", "Legal", "Tabloid", "B5", "Executive"];
 
@@ -35,6 +38,8 @@ const ImagesToPdf = () => {
     quality: "high",
     margin: 10,
   });
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleFilesSelected = useCallback(async (files: File[]) => {
     const newImages = files.map(createImageFile);
@@ -73,6 +78,18 @@ const ImagesToPdf = () => {
 
   const handleConvert = async () => {
     if (images.length === 0) return;
+
+    const gate = await checkFreeGate();
+    if (!gate.allowed) {
+      toast({
+        title: "Sign in to keep generating",
+        description: "You've used your free generation. Create a free account to continue.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
     setConverting(true);
     setProgress({ current: 0, total: images.length });
 
@@ -89,6 +106,7 @@ const ImagesToPdf = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      await consumeFreeGeneration();
     } catch (err) {
       console.error("Conversion failed:", err);
     } finally {
@@ -130,15 +148,18 @@ const ImagesToPdf = () => {
               transition={{ duration: 0.5 }}
             >
               <Badge variant="secondary" className="mb-4 text-sm px-4 py-1 bg-primary/10 text-primary border-0">
-                <Sparkles className="w-3.5 h-3.5 mr-1.5" /> New Feature
+                <Shield className="w-3.5 h-3.5 mr-1.5" /> 100% Local · Browser-Only
               </Badge>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold font-display tracking-tight mb-4">
                 <span className="gradient-text">Image to PDF</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
                 Convert 100+ images into a single PDF. Supports 25+ formats including HEIC, WebP, TIFF, SVG, RAW & more.
-                <span className="block mt-1 text-sm font-medium text-primary">100% client-side — your images never leave your device</span>
               </p>
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-xs sm:text-sm text-primary font-medium">
+                <Shield className="w-4 h-4" />
+                Your images never leave your browser. Zero upload. Zero leak.
+              </div>
             </motion.div>
           </div>
         </section>
@@ -286,6 +307,13 @@ const ImagesToPdf = () => {
                       </p>
                     </div>
                   )}
+
+                  {/* Free badge */}
+                  <div className="flex justify-center">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/15 to-accent/15 text-primary border border-primary/20">
+                      <Sparkles className="w-3 h-3" /> Completely Free
+                    </span>
+                  </div>
 
                   {/* Convert button */}
                   <Button
