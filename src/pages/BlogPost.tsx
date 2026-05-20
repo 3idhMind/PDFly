@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
+import { Helmet } from "react-helmet-async";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -848,6 +849,21 @@ const BlogPost = () => {
         canonical={`${SITE_URL}/blog/${slug}`}
         ogType="article"
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: postMeta.title,
+          description: postMeta.excerpt,
+          image: postMeta.image,
+          datePublished: postMeta.date,
+          dateModified: postMeta.date,
+          keywords: postMeta.tags.join(", "),
+          author: { "@type": "Organization", name: "3idhMinds", url: SITE_URL },
+          publisher: { "@type": "Organization", name: "PDFly by 3idhMinds", url: SITE_URL },
+          mainEntityOfPage: { "@type": "WebPage", "@id": `${SITE_URL}/blog/${slug}` },
+        })}</script>
+      </Helmet>
       <Header />
       <main className="container mx-auto px-4 py-12 max-w-3xl flex-1">
         <Button variant="ghost" size="sm" asChild className="mb-6">

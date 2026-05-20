@@ -1,6 +1,7 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
+import { Helmet } from "react-helmet-async";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -142,6 +143,24 @@ const Blog = () => {
         keywords="PDF generation blog, HTML to PDF tutorial, PDF API guide, multi-language PDF, invoice PDF, certificate PDF, 3idhMind blog"
         canonical={`${SITE_URL}/blog`}
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Blog",
+          name: "PDFly Blog",
+          url: `${SITE_URL}/blog`,
+          description: "Guides, tutorials, and tips for PDF generation by 3idhMind.",
+          blogPost: blogPosts.map(p => ({
+            "@type": "BlogPosting",
+            headline: p.title,
+            url: `${SITE_URL}/blog/${p.slug}`,
+            datePublished: p.date,
+            image: p.image,
+            keywords: p.tags.join(", "),
+            author: { "@type": "Organization", name: "3idhMinds" },
+          })),
+        })}</script>
+      </Helmet>
       <Header />
       <main className="container mx-auto px-4 py-12 max-w-4xl flex-1">
         <motion.div className="mb-12" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

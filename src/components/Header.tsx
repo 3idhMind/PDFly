@@ -1,4 +1,4 @@
-import { FileText, Settings, BookOpen, LogIn, LogOut, Menu, X, DollarSign, Newspaper, ImagePlus } from "lucide-react";
+import { LogIn, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -8,137 +8,121 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { motion, AnimatePresence } from "framer-motion";
 import type { User } from "@supabase/supabase-js";
 
+const NAV = [
+  { to: "/create", label: "Create" },
+  { to: "/app", label: "Text to PDF" },
+  { to: "/images-to-pdf", label: "Images to PDF" },
+  { to: "/docs", label: "API Docs" },
+  { to: "/pricing", label: "Pricing" },
+];
+
 export const Header = () => {
   const [user, setUser] = useState<User | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
-  };
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
+  const handleLogout = async () => { await supabase.auth.signOut(); navigate("/"); };
   const closeMenu = () => setMobileOpen(false);
 
-  const navLinkClass = "relative text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-200 px-3 py-2 rounded-md hover:bg-secondary/80 group";
-
   return (
-    <header className="border-b border-border/60 bg-card/80 backdrop-blur-xl sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between max-w-7xl">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-accent shadow-md group-hover:shadow-lg transition-shadow duration-300">
-            <FileText className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold font-display text-foreground tracking-tight">PDFly</h1>
-            <p className="text-[10px] text-muted-foreground leading-none">by 3idhMind</p>
-          </div>
-        </Link>
+    <>
+      <header
+        className={`sticky top-0 z-50 transition-shadow duration-300 backdrop-blur-xl bg-background/85 border-b ${
+          scrolled ? "border-border shadow-[0_1px_3px_rgba(0,0,0,0.06)]" : "border-transparent"
+        }`}
+      >
+        <div className="container mx-auto px-5 py-3.5 flex items-center justify-between max-w-7xl">
+          <Link to="/" className="flex flex-col leading-none group">
+            <span className="font-display font-bold text-[22px] text-foreground tracking-tight group-hover:text-primary transition-colors">PDFly</span>
+            <span className="text-[10px] text-muted-foreground mt-0.5">by 3idhMinds</span>
+          </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1">
-          <Link to="/create" className={navLinkClass}>
-            <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Create</span>
-          </Link>
-          <Link to="/app" className={navLinkClass}>
-            <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Text to PDF</span>
-          </Link>
-          <Link to="/images-to-pdf" className={navLinkClass}>
-            <span className="flex items-center gap-1.5"><ImagePlus className="w-3.5 h-3.5" /> Images to PDF</span>
-          </Link>
-          <Link to="/pricing" className={navLinkClass}>
-            <span className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" /> Pricing</span>
-          </Link>
-          <Link to="/docs" className={navLinkClass}>
-            <span className="flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" /> API Docs</span>
-          </Link>
-          <Link to="/blog" className={navLinkClass}>
-            <span className="flex items-center gap-1.5"><Newspaper className="w-3.5 h-3.5" /> Blog</span>
-          </Link>
-          <div className="w-px h-6 bg-border mx-1" />
-          {user ? (
-            <ProfileMenu user={user} />
-          ) : (
-            <Button size="sm" asChild className="ml-1 shadow-sm">
-              <Link to="/auth"><LogIn className="w-3.5 h-3.5 mr-1.5" /> Sign In</Link>
+          <nav className="hidden md:flex items-center gap-0.5">
+            {NAV.map(n => (
+              <Link key={n.to} to={n.to} className="nav-link">{n.label}</Link>
+            ))}
+          </nav>
+
+          <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle />
+            {user ? (
+              <ProfileMenu user={user} />
+            ) : (
+              <Button size="sm" variant="ghost" asChild className="text-sm">
+                <Link to="/auth"><LogIn className="w-3.5 h-3.5 mr-1.5" /> Sign In</Link>
+              </Button>
+            )}
+          </div>
+
+          <div className="flex md:hidden items-center gap-1">
+            <ThemeToggle />
+            <Button variant="ghost" size="sm" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+              <Menu className="w-5 h-5" />
             </Button>
-          )}
-          <ThemeToggle />
-        </nav>
-
-        {/* Mobile Toggle */}
-        <div className="flex md:hidden items-center gap-2">
-          <ThemeToggle />
-          <Button variant="ghost" size="sm" onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile Menu */}
+      {/* Fullscreen mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="md:hidden border-t border-border bg-card overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] bg-background md:hidden flex flex-col"
           >
-            <div className="px-4 py-4 space-y-1">
-              <Link to="/create" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <FileText className="w-4 h-4 text-primary" /> Create
-              </Link>
-              <Link to="/app" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <FileText className="w-4 h-4 text-primary" /> Text to PDF
-              </Link>
-              <Link to="/images-to-pdf" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <ImagePlus className="w-4 h-4 text-primary" /> Images to PDF
-              </Link>
-              <Link to="/pricing" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <DollarSign className="w-4 h-4 text-primary" /> Pricing
-              </Link>
-              <Link to="/docs" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <BookOpen className="w-4 h-4 text-primary" /> API Docs
-              </Link>
-              <Link to="/blog" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                <Newspaper className="w-4 h-4 text-primary" /> Blog
-              </Link>
-              {user && (
-                <Link to="/settings" onClick={closeMenu} className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-secondary transition-colors">
-                  <Settings className="w-4 h-4 text-primary" /> Profile & Settings
-                </Link>
-              )}
-              <div className="pt-2 border-t border-border">
-                {user ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-muted-foreground/70 text-xs"
-                    onClick={() => { handleLogout(); closeMenu(); }}
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+              <span className="font-display font-bold text-[22px]">PDFly</span>
+              <Button variant="ghost" size="sm" onClick={closeMenu} aria-label="Close menu"><X className="w-5 h-5" /></Button>
+            </div>
+            <nav className="flex-1 flex flex-col justify-center px-8 gap-2">
+              {NAV.map((n, i) => (
+                <motion.div
+                  key={n.to}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 + i * 0.06, duration: 0.35, ease: "easeOut" }}
+                >
+                  <Link
+                    to={n.to}
+                    onClick={closeMenu}
+                    className="block font-display text-4xl font-bold tracking-tight py-3 text-foreground hover:text-primary transition-colors"
                   >
-                    <LogOut className="w-3.5 h-3.5 mr-2 opacity-60" /> Sign out
-                  </Button>
-                ) : (
-                  <Button size="sm" className="w-full" asChild onClick={closeMenu}>
-                    <Link to="/auth"><LogIn className="w-4 h-4 mr-2" /> Sign In</Link>
-                  </Button>
-                )}
-              </div>
+                    {n.label}
+                  </Link>
+                </motion.div>
+              ))}
+            </nav>
+            <div className="p-6 border-t border-border">
+              {user ? (
+                <Button variant="outline" className="w-full" onClick={() => { handleLogout(); closeMenu(); }}>
+                  <LogOut className="w-4 h-4 mr-2" /> Sign out
+                </Button>
+              ) : (
+                <Button className="w-full h-12 text-base" asChild onClick={closeMenu}>
+                  <Link to="/auth"><LogIn className="w-4 h-4 mr-2" /> Sign In</Link>
+                </Button>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </>
   );
 };

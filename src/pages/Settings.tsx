@@ -9,6 +9,8 @@ import { Key, Plus, Trash2, Copy, EyeOff, Activity, BarChart3, FileText, Downloa
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/Footer";
 import type { User } from "@supabase/supabase-js";
+import { SEOHead } from "@/components/SEOHead";
+import { SITE_URL } from "@/lib/config";
 
 interface ApiKey {
   id: string;
@@ -182,6 +184,11 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-secondary/20">
+      <SEOHead
+        title="Settings & API Keys — PDFly"
+        description="Manage your PDFly API keys, view usage statistics, and configure rate limits for your PDF generation account."
+        canonical={`${SITE_URL}/settings`}
+      />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-3xl font-bold text-foreground mb-8">Settings & API Management</h1>

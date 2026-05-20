@@ -1,0 +1,37 @@
+# PDFly by 3idhMinds
+
+> Free universal PDF generator and REST API. Convert text or HTML to PDF in 70+ languages, convert 25+ image formats to PDF, all with client-side processing where possible — your files never leave your browser.
+
+## Pages
+
+- [Home](/): Product overview, features, and live demo.
+- [PDF Generator App](/app): Web UI to generate PDFs from text using 15 templates.
+- [Text to PDF](/text-to-pdf): Feature page for text/HTML to PDF conversion.
+- [Image to PDF](/image-to-pdf): Feature page for converting images to PDF.
+- [Convert Images](/images-to-pdf): Web UI to combine 100+ images into a single PDF.
+- [API Documentation](/docs): REST API reference, code samples, authentication, rate limits.
+- [Pricing](/pricing): Free tier details and upcoming Pro plans.
+- [Status](/status): Live system status for API and edge functions.
+- [Blog](/blog): Tutorials and guides on PDF generation.
+
+## Blog
+
+- [Convert Images to PDF Free](/blog/convert-images-to-pdf-free): JPG, PNG, HEIC and 25+ formats.
+- [Top 10 Free PDF Tools for Developers 2026](/blog/top-10-free-pdf-tools-developers-2026)
+- [PDF Generation Pipeline with PDFly API](/blog/pdf-generation-pipeline-pdfly-api)
+- [PDFly vs Adobe vs Smallpdf](/blog/pdfly-vs-adobe-smallpdf-comparison)
+- [HTML to PDF API Guide](/blog/html-to-pdf-api-guide)
+- [Multi-language PDF Generation](/blog/multi-language-pdf-generation)
+- [Batch PDF Generation API](/blog/batch-pdf-generation-api)
+- [PDF Templates Guide](/blog/pdf-templates-guide)
+- [Free PDF API for Developers](/blog/free-pdf-api-developers)
+- [Invoice PDF Generation Tutorial](/blog/invoice-pdf-generation-tutorial)
+- [PDF API vs Puppeteer vs wkhtmltopdf](/blog/pdf-api-vs-puppeteer-wkhtmltopdf)
+- [PDF Generation for SaaS](/blog/pdf-generation-for-saas)
+- [RTL PDF Generation (Arabic, Hebrew)](/blog/rtl-pdf-generation-arabic-hebrew)
+- [Certificate PDF Generation in Bulk](/blog/certificate-pdf-generation-bulk)
+
+## Optional
+
+- [Privacy Policy](/privacy)
+- [Terms of Service](/terms)

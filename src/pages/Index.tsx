@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, ShieldCheck, Lock, Wifi, Sparkles } from "lucide-react";
 import { generatePdfsClient } from "@/lib/clientPdfGenerator";
 import { checkFreeGate, consumeFreeGeneration } from "@/lib/freeGenerationGate";
+import { SEOHead } from "@/components/SEOHead";
+import { SITE_URL } from "@/lib/config";
 
 const createDoc = (title = "Untitled Document"): DocumentSection => ({
   id: crypto.randomUUID(),
@@ -128,6 +130,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead
+        title="PDF Generator App — Create PDFs Free | PDFly"
+        description="Generate beautiful multi-language PDFs in your browser. 15 templates, 70+ languages, no signup required for basic use."
+        canonical={`${SITE_URL}/app`}
+      />
       <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl flex-1">

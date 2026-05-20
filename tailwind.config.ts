@@ -15,7 +15,9 @@ export default {
     extend: {
       fontFamily: {
         sans: ['DM Sans', 'Noto Sans Devanagari', 'sans-serif'],
-        display: ['Space Grotesk', 'Noto Sans Devanagari', 'sans-serif'],
+        display: ['Syne', 'Noto Sans Devanagari', 'sans-serif'],
+        serif: ['Instrument Serif', 'serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
         devanagari: ['Noto Sans Devanagari', 'DM Sans', 'sans-serif'],
       },
       colors: {
