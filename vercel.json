@@ -1,3 +1,9 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/api/:fn*",
+      "destination": "https://nlnqpcfezbssssrwddyl.supabase.co/functions/v1/:fn*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

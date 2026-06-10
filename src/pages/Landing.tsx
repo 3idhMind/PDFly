@@ -121,7 +121,7 @@ const Landing = () => {
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
                     <span className="w-2.5 h-2.5 rounded-full bg-primary/70" />
                   </div>
-                  <span className="text-[10px] font-mono text-muted-foreground">pdfly.live · interactive demo</span>
+                  <span className="text-[10px] font-mono text-muted-foreground">pdfly.3idhmind.in · interactive demo</span>
                 </div>
 
                 <div className="grid grid-cols-2 min-h-[340px]">
@@ -232,11 +232,14 @@ const Landing = () => {
               <p className="text-white/60 text-sm mb-5">Drop-in REST endpoint. JSON in, PDF out.</p>
               <pre className="font-mono text-[11px] leading-relaxed text-white/90 bg-white/5 rounded-lg p-4 border border-white/10 overflow-x-auto">
 {`curl -X POST \\
-  https://pdfly.live/api/v1/pdf \\
+  https://pdfly.3idhmind.in/api/generate-pdf \\
   -H "Authorization: Bearer $KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "content": "# Hello",
+    "documents": [{
+      "title": "Hello",
+      "content": "# Hello"
+    }],
     "template": "minimal"
   }' \\
   --output out.pdf`}

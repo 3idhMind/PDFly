@@ -17,7 +17,11 @@ export const useIsAdmin = () => {
 
       // Always ask the backend — it verifies the email against the ADMIN_EMAIL
       // secret server-side. The frontend never knows the admin email.
-      try { await supabase.functions.invoke("bootstrap-admin"); } catch { /* ignore */ }
+      try {
+        await supabase.functions.invoke("bootstrap-admin");
+      } catch (err) {
+        console.warn("bootstrap-admin invoke failed:", err);
+      }
 
       const { data, error } = await supabase
         .from("user_roles" as any)

@@ -9,9 +9,6 @@ verify_jwt = false
 [functions.cleanup-documents]
 verify_jwt = false
 
-[functions.notify-feedback]
-verify_jwt = false
-
 [functions.health-check]
 verify_jwt = false
 

@@ -19,8 +19,8 @@ const Docs = () => {
   const [postDropdownOpen, setPostDropdownOpen] = useState(false);
   const [getDropdownOpen, setGetDropdownOpen] = useState(false);
 
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "your-project-id";
-  const functionsBaseUrl = `https://${projectId}.supabase.co/functions/v1`;
+  // Short, branded API base. Proxied via vercel.json `/api/*` → Supabase Edge Functions.
+  const functionsBaseUrl = "https://pdfly.3idhmind.in/api";
 
   const copyToClipboard = (text: string, label?: string) => {
     navigator.clipboard.writeText(text);

@@ -40,15 +40,9 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="mt-10 pt-6 border-t border-border flex items-center justify-center">
           <p className="text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} PDFly by 3idhMinds. All rights reserved.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Built in Public by Dev Vaham ·{" "}
-            <a href="https://instagram.com/devvaham" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors">
-              @devvaham on Instagram
-            </a>
           </p>
         </div>
       </div>

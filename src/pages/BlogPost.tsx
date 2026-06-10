@@ -173,7 +173,7 @@ async function generatePDFs(invoices) {
 
   const results = [];
   for (const batch of batches) {
-    const response = await fetch('https://your-api-url/functions/v1/generate-pdf', {
+    const response = await fetch('https://pdfly.3idhmind.in/api/generate-pdf', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -228,7 +228,7 @@ import requests
 import time
 
 def generate_pdf_batch(documents, api_key):
-    url = 'https://your-api-url/functions/v1/generate-pdf'
+    url = 'https://pdfly.3idhmind.in/api/generate-pdf'
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {api_key}'
