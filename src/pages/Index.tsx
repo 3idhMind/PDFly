@@ -14,7 +14,6 @@ import { DocumentSection } from "@/types/pdf";
 import { Button } from "@/components/ui/button";
 import { Plus, ShieldCheck, Lock, Wifi, Sparkles } from "lucide-react";
 import { generatePdfsClient } from "@/lib/clientPdfGenerator";
-import { checkFreeGate, consumeFreeGeneration } from "@/lib/freeGenerationGate";
 import { SEOHead } from "@/components/SEOHead";
 import { SITE_URL } from "@/lib/config";
 
@@ -85,18 +84,6 @@ const Index = () => {
       return;
     }
 
-    // Free generation gate — 1 free, then login required
-    const gate = await checkFreeGate();
-    if (!gate.allowed) {
-      toast({
-        title: "Sign in to keep generating",
-        description: "You've used your free generation. Create a free account to continue — it takes 10 seconds.",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
-
     setIsGenerating(true);
     setProgressCurrent(0);
     setProgressTotal(nonEmpty.length);
@@ -115,7 +102,6 @@ const Index = () => {
         },
       });
 
-      await consumeFreeGeneration();
       setGeneratedPdfs(pdfs.map((p) => ({ title: p.title, url: p.url, sizeBytes: p.sizeBytes })));
       setIsGenerating(false);
       setShowSuccess(true);
@@ -131,21 +117,23 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
-        title="PDF Generator App — Create PDFs Free | PDFly"
-        description="Generate beautiful multi-language PDFs in your browser. 15 templates, 70+ languages, no signup required for basic use."
+        title="Text to PDF — Free Online Text to PDF Converter | PDFly"
+        description="Convert text to PDF free in your browser. 15 templates, 70+ languages, no upload, no watermark, no signup for basic use."
         canonical={`${SITE_URL}/app`}
+
       />
       <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl flex-1">
         <div className="mb-6">
           <h1 className="text-4xl md:text-5xl font-bold font-display text-foreground mb-3">
-            <span className="gradient-text">PDFly</span> Generator
+            <span className="gradient-text">Text to PDF</span>
           </h1>
           <p className="text-lg text-muted-foreground">
-            Convert any content to beautiful PDFs — any document, any language, any template
+            Turn plain text into a beautiful PDF — any language, 15 templates, right in your browser.
           </p>
         </div>
+
 
         {/* Privacy badge */}
         <div className="mb-8 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 p-5">

@@ -22,7 +22,7 @@
 - **15 Professional Templates** — Minimal, Professional, Creative, Modern, Classic, Elegant, Bold, Tech, Academic, Corporate, Artistic, Clean, Vibrant, Dark, Light
 - **Full RTL Support** — Arabic, Hebrew, Urdu, Persian with bidirectional text rendering
 - **HTML & Markdown** — Send raw HTML with CSS or plain text. Tables, headings, images, custom styles
-- **Batch Generation** — Generate up to 10 PDFs in a single API request
+- **Batch Generation** — Generate up to 5 PDFs in a single API request
 
 ### 🖼️ Image to PDF
 - **25+ Image Formats** — JPEG, PNG, WebP, HEIC/HEIF, TIFF, GIF, BMP, SVG, AVIF, PSD, RAW (CR2, NEF, ARW, DNG, ORF, RW2, RAF, PEF, SR2, SRW), and more

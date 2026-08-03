@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Code, Copy, BookOpen, Zap, Globe, FileText, AlertTriangle, Gauge, Lightbulb, Download, ImageIcon, ChevronDown, Check } from "lucide-react";
+import { Code, Copy, BookOpen, Zap, Globe, FileText, AlertTriangle, Gauge, Lightbulb, Download, ImageIcon, ChevronDown, Check, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -40,8 +40,12 @@ const Docs = () => {
     { id: "quickstart", label: "Quick Start" },
     { id: "auth", label: "Authentication" },
     { id: "endpoints", label: "API Endpoints" },
+    { id: "sdk", label: "JavaScript SDK" },
     { id: "post-generate", label: "POST — Generate PDF" },
+    { id: "tool-apis", label: "Tool APIs (Merge/Split/…)" },
     { id: "get-retrieve", label: "GET — Retrieve Documents" },
+    { id: "browser-tools", label: "Free Browser Tools" },
+    { id: "local-vs-cloud", label: "Local vs Cloud Processing" },
     { id: "limits", label: "Content Limits" },
     { id: "languages", label: "Languages" },
     { id: "templates", label: "Templates" },
@@ -318,12 +322,80 @@ const Docs = () => {
               <div className="space-y-3">
                 <EndpointBox method="POST" path="/generate-pdf" fullUrl={`${functionsBaseUrl}/generate-pdf`} />
                 <EndpointBox method="POST" path="/images-to-pdf" fullUrl={`${functionsBaseUrl}/images-to-pdf`} />
+                <EndpointBox method="POST" path="/merge-pdf" fullUrl={`${functionsBaseUrl}/merge-pdf`} />
+                <EndpointBox method="POST" path="/split-pdf" fullUrl={`${functionsBaseUrl}/split-pdf`} />
+                <EndpointBox method="POST" path="/compress-pdf" fullUrl={`${functionsBaseUrl}/compress-pdf`} />
+                <EndpointBox method="POST" path="/pdf-to-images" fullUrl={`${functionsBaseUrl}/pdf-to-images`} />
                 <EndpointBox method="GET" path="/get-documents" fullUrl={`${functionsBaseUrl}/get-documents`} />
                 <EndpointBox method="GET" path="/get-documents?id=DOC_ID" fullUrl={`${functionsBaseUrl}/get-documents?id=DOC_ID`} />
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                Click any endpoint to copy the full URL.
+                Click any endpoint to copy the full URL. All POST endpoints require a Bearer API key.
+                Generated files are auto-deleted within 1 hour.
               </p>
+            </Card>
+
+            {/* ===== JAVASCRIPT SDK ===== */}
+            <Card id="sdk" className="p-6 mb-6">
+              <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Code className="w-5 h-5 text-primary" /> JavaScript SDK
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                A lightweight TypeScript wrapper around every PDFly endpoint. Ships with types for every input and response.
+              </p>
+
+              <h3 className="text-sm font-semibold text-foreground mb-2">Install</h3>
+              <button onClick={() => copyToClipboard('npm install @pdfly/sdk', 'Install')} className="group w-full text-left mb-4">
+                <code className="text-sm bg-muted p-3 rounded block text-foreground group-hover:bg-muted/80 transition-colors flex items-center justify-between">
+                  <span>npm install @pdfly/sdk</span>
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </code>
+              </button>
+
+              <h3 className="text-sm font-semibold text-foreground mb-2">Quick start</h3>
+              <CodeSwitcher entries={[{
+                language: "typescript", label: "TypeScript",
+                code: `import { PDFly } from "@pdfly/sdk";
+
+const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
+
+// Text to PDF
+const { pdfs } = await pdfly.textToPdf({
+  documents: [{ title: "Invoice", content: "<h1>Hello</h1>" }],
+  template: "professional",
+});
+
+// Merge two PDFs (URLs or base64)
+const merged = await pdfly.mergePdf({ pdfs: [pdfs[0].url, "https://example.com/other.pdf"] });
+
+// Split a PDF into segments
+const split = await pdfly.splitPdf({ pdf: merged.url, ranges: "1-3,5,7-9" });
+
+// Compress
+const small = await pdfly.compressPdf({ pdf: merged.url });
+
+// Split every page into a separate PDF
+const perPage = await pdfly.pdfToImages({ pdf: merged.url });`,
+              }]} />
+
+              <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">Methods</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border">
+                    <th className="text-left p-2 text-foreground">Method</th>
+                    <th className="text-left p-2 text-foreground">Endpoint</th>
+                    <th className="text-left p-2 text-foreground">Purpose</th>
+                  </tr></thead>
+                  <tbody className="text-muted-foreground">
+                    <tr className="border-b border-border"><td className="p-2 font-mono">textToPdf</td><td className="p-2 font-mono">/generate-pdf</td><td className="p-2">HTML/text → PDF (batch)</td></tr>
+                    <tr className="border-b border-border"><td className="p-2 font-mono">batchGenerate</td><td className="p-2 font-mono">/generate-pdf</td><td className="p-2">Alias of textToPdf — up to 5 docs per call</td></tr>
+                    <tr className="border-b border-border"><td className="p-2 font-mono">mergePdf</td><td className="p-2 font-mono">/merge-pdf</td><td className="p-2">Combine multiple PDFs</td></tr>
+                    <tr className="border-b border-border"><td className="p-2 font-mono">splitPdf</td><td className="p-2 font-mono">/split-pdf</td><td className="p-2">Extract page ranges</td></tr>
+                    <tr className="border-b border-border"><td className="p-2 font-mono">compressPdf</td><td className="p-2 font-mono">/compress-pdf</td><td className="p-2">Rewrite with smaller size</td></tr>
+                    <tr><td className="p-2 font-mono">pdfToImages</td><td className="p-2 font-mono">/pdf-to-images</td><td className="p-2">Each page as separate PDF</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </Card>
 
             {/* ===== 4. POST — GENERATE PDF ===== */}
@@ -835,6 +907,14 @@ if data.get('success'):
                     <tr className="border-b border-border"><td className="p-2">Max cumulative output</td><td className="p-2 font-mono">20 MB per batch</td></tr>
                     <tr className="border-b border-border"><td className="p-2">Images per API request</td><td className="p-2 font-mono">Max 20</td></tr>
                     <tr className="border-b border-border"><td className="p-2">Images via Web UI</td><td className="p-2 font-mono">100+</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">Input PDF size (merge/split/compress/pdf-to-images)</td><td className="p-2 font-mono">Max 20 MB per file</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">Combined input size per request</td><td className="p-2 font-mono">Max 50 MB</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">Hard request body cap</td><td className="p-2 font-mono">70 MB (rejected before reading)</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">PDFs per merge request</td><td className="p-2 font-mono">Max 20</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">Pages per pdf-to-images request</td><td className="p-2 font-mono">Max 100</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">API key rate limit</td><td className="p-2 font-mono">60 requests/min per key (per endpoint)</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">Signed-in (JWT) rate limit</td><td className="p-2 font-mono">10 generations / 5 min</td></tr>
+                    <tr className="border-b border-border"><td className="p-2">Cloud fallback (web UI)</td><td className="p-2 font-mono">40 MB &amp; 40 files per job, 12 req/min per IP</td></tr>
                     <tr><td className="p-2">Download URL validity</td><td className="p-2 font-mono">1 hour (refreshable via GET)</td></tr>
                   </tbody>
                 </table>
@@ -961,6 +1041,369 @@ if data.get('success'):
                 </div>
               </div>
             </Card>
+
+            {/* ===== TOOL APIs (Merge / Split / Compress / PDF-to-Images) ===== */}
+            <Card id="tool-apis" className="p-6 mb-6">
+              <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" /> Tool APIs — Merge · Split · Compress · PDF-to-Images
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                All four endpoints accept the same input shape: either a <strong>base64 string</strong>
+                (optionally with a <code className="bg-muted px-1 rounded">data:application/pdf;base64,</code> prefix)
+                or an <strong>https URL</strong> to a PDF. Each PDF is capped at 20&nbsp;MB. Every response returns a
+                signed <code className="bg-muted px-1 rounded">url</code> valid for 1 hour, after which the file is auto-deleted.
+              </p>
+              <p className="text-sm mb-4">
+                <Link to="/api-playground" className="text-primary hover:underline font-medium">
+                  → Try these endpoints live in the API Playground
+                </Link>
+              </p>
+
+              {/* MERGE */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-foreground mb-2">Merge PDF</h3>
+                <EndpointBox method="POST" path="/merge-pdf" fullUrl={`${functionsBaseUrl}/merge-pdf`} />
+                <p className="text-xs text-muted-foreground mt-2 mb-2">
+                  Combine 2–20 PDFs into one. Order in the array = order in the output.
+                </p>
+                <CodeSwitcher entries={[
+                  { language: "curl", label: "cURL", code: `curl -X POST '${functionsBaseUrl}/merge-pdf' \\
+  -H 'Authorization: Bearer pdfgen_...' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"pdfs":["https://example.com/a.pdf","https://example.com/b.pdf"]}'` },
+                  { language: "javascript", label: "JavaScript", code: `// Using fetch — with error handling
+const res = await fetch("${functionsBaseUrl}/merge-pdf", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: \`Bearer \${process.env.PDFLY_API_KEY}\`,
+  },
+  body: JSON.stringify({
+    pdfs: ["https://example.com/a.pdf", "https://example.com/b.pdf"],
+  }),
+});
+if (!res.ok) {
+  const err = await res.json().catch(() => ({ message: res.statusText }));
+  throw new Error(\`Merge failed (\${res.status}): \${err.message}\`);
+}
+const { url, pages_merged } = await res.json();
+console.log(\`Merged \${pages_merged} pages → \${url}\`); // expires in 1 hour` },
+                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
+const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
+
+try {
+  const merged = await pdfly.mergePdf({
+    pdfs: ["https://example.com/a.pdf", "https://example.com/b.pdf"],
+  });
+  console.log(merged.url);
+} catch (err) {
+  console.error("Merge failed:", (err as Error).message);
+}` },
+                  { language: "python", label: "Python", code: `import os, requests
+
+resp = requests.post(
+    "${functionsBaseUrl}/merge-pdf",
+    headers={
+        "Authorization": f"Bearer {os.environ['PDFLY_API_KEY']}",
+        "Content-Type": "application/json",
+    },
+    json={"pdfs": [
+        "https://example.com/a.pdf",
+        "https://example.com/b.pdf",
+    ]},
+    timeout=60,
+)
+try:
+    resp.raise_for_status()
+except requests.HTTPError:
+    err = resp.json() if resp.text else {"message": resp.reason}
+    raise RuntimeError(f"Merge failed ({resp.status_code}): {err.get('message')}")
+
+data = resp.json()
+print("Merged", data["pages_merged"], "pages ->", data["url"])` },
+                ]} />
+                <p className="text-xs text-muted-foreground mt-2">Response:</p>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "url": "...", "size_bytes": 45230, "pages_merged": 8, "expires_in_seconds": 3600 }`}</pre>
+              </div>
+
+              {/* SPLIT */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-foreground mb-2">Split PDF</h3>
+                <EndpointBox method="POST" path="/split-pdf" fullUrl={`${functionsBaseUrl}/split-pdf`} />
+                <p className="text-xs text-muted-foreground mt-2 mb-2">
+                  Extract page ranges. <code className="bg-muted px-1 rounded">ranges</code> uses the
+                  format <code className="bg-muted px-1 rounded">1-3,5,7-9</code> — each comma-separated
+                  segment becomes a separate output PDF (up to 50 segments).
+                </p>
+                <CodeSwitcher entries={[
+                  { language: "curl", label: "cURL", code: `curl -X POST '${functionsBaseUrl}/split-pdf' \\
+  -H 'Authorization: Bearer pdfgen_...' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"pdf":"https://example.com/doc.pdf","ranges":"1-3,5,7-9"}'` },
+                  { language: "javascript", label: "JavaScript", code: `const res = await fetch("${functionsBaseUrl}/split-pdf", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: \`Bearer \${process.env.PDFLY_API_KEY}\`,
+  },
+  body: JSON.stringify({
+    pdf: "https://example.com/doc.pdf",
+    ranges: "1-3,5,7-9",
+  }),
+});
+if (!res.ok) {
+  const err = await res.json().catch(() => ({ message: res.statusText }));
+  throw new Error(\`Split failed (\${res.status}): \${err.message}\`);
+}
+const data = await res.json();
+data.pdfs.forEach(p => console.log(p.name, "->", p.url));` },
+                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
+const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
+
+try {
+  const split = await pdfly.splitPdf({
+    pdf: "https://example.com/doc.pdf",
+    ranges: "1-3,5,7-9",
+  });
+  split.pdfs.forEach(p => console.log(p.name, p.url));
+} catch (err) {
+  console.error("Split failed:", (err as Error).message);
+}` },
+                  { language: "python", label: "Python", code: `import os, requests
+
+resp = requests.post(
+    "${functionsBaseUrl}/split-pdf",
+    headers={
+        "Authorization": f"Bearer {os.environ['PDFLY_API_KEY']}",
+        "Content-Type": "application/json",
+    },
+    json={
+        "pdf": "https://example.com/doc.pdf",
+        "ranges": "1-3,5,7-9",
+    },
+    timeout=60,
+)
+try:
+    resp.raise_for_status()
+except requests.HTTPError:
+    err = resp.json() if resp.text else {"message": resp.reason}
+    raise RuntimeError(f"Split failed ({resp.status_code}): {err.get('message')}")
+
+for p in resp.json()["pdfs"]:
+    print(p["name"], "->", p["url"])` },
+                ]} />
+                <p className="text-xs text-muted-foreground mt-2">Response:</p>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "source_pages": 10, "pdfs": [
+  { "name": "split_p1-3.pdf", "url": "...", "size_bytes": 12034, "pages": 3 },
+  { "name": "split_p5.pdf",   "url": "...", "size_bytes": 4210,  "pages": 1 },
+  { "name": "split_p7-9.pdf", "url": "...", "size_bytes": 11023, "pages": 3 }
+]}`}</pre>
+              </div>
+
+              {/* COMPRESS */}
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-foreground mb-2">Compress PDF</h3>
+                <EndpointBox method="POST" path="/compress-pdf" fullUrl={`${functionsBaseUrl}/compress-pdf`} />
+                <p className="text-xs text-muted-foreground mt-2 mb-2">
+                  Strips metadata and rewrites the PDF with object streams. Typical savings: 5–40%
+                  depending on the source. Visual content is preserved as-is (no image rasterization).
+                </p>
+                <CodeSwitcher entries={[
+                  { language: "curl", label: "cURL", code: `curl -X POST '${functionsBaseUrl}/compress-pdf' \\
+  -H 'Authorization: Bearer pdfgen_...' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"pdf":"https://example.com/big.pdf"}'` },
+                  { language: "javascript", label: "JavaScript", code: `const res = await fetch("${functionsBaseUrl}/compress-pdf", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: \`Bearer \${process.env.PDFLY_API_KEY}\`,
+  },
+  body: JSON.stringify({ pdf: "https://example.com/big.pdf" }),
+});
+if (!res.ok) {
+  const err = await res.json().catch(() => ({ message: res.statusText }));
+  throw new Error(\`Compress failed (\${res.status}): \${err.message}\`);
+}
+const data = await res.json();
+console.log(\`Saved \${data.savings_percent}% -> \${data.url}\`);` },
+                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
+const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
+
+try {
+  const small = await pdfly.compressPdf({ pdf: "https://example.com/big.pdf" });
+  console.log(\`Saved \${small.savings_percent}%\`);
+} catch (err) {
+  console.error("Compress failed:", (err as Error).message);
+}` },
+                  { language: "python", label: "Python", code: `import os, requests
+
+resp = requests.post(
+    "${functionsBaseUrl}/compress-pdf",
+    headers={
+        "Authorization": f"Bearer {os.environ['PDFLY_API_KEY']}",
+        "Content-Type": "application/json",
+    },
+    json={"pdf": "https://example.com/big.pdf"},
+    timeout=60,
+)
+try:
+    resp.raise_for_status()
+except requests.HTTPError:
+    err = resp.json() if resp.text else {"message": resp.reason}
+    raise RuntimeError(f"Compress failed ({resp.status_code}): {err.get('message')}")
+
+data = resp.json()
+print(f"Saved {data['savings_percent']}% -> {data['url']}")` },
+                ]} />
+                <p className="text-xs text-muted-foreground mt-2">Response:</p>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "url": "...", "original_size_bytes": 1240000, "compressed_size_bytes": 890000, "compression_ratio": 0.718, "savings_percent": 28.2 }`}</pre>
+              </div>
+
+              {/* PDF-TO-IMAGES */}
+              <div>
+                <h3 className="text-sm font-semibold text-foreground mb-2">PDF to Images</h3>
+                <EndpointBox method="POST" path="/pdf-to-images" fullUrl={`${functionsBaseUrl}/pdf-to-images`} />
+                <p className="text-xs text-muted-foreground mt-2 mb-2">
+                  Returns <strong>each page as a single-page PDF</strong> (up to 100 pages). This gives
+                  developers a stable per-page split that works in every downstream pipeline. For raster
+                  PNG/JPEG output, use the free browser tool at{" "}
+                  <Link to="/pdf-to-images" className="text-primary hover:underline">/pdf-to-images</Link> —
+                  the browser can rasterize via canvas without shipping your file anywhere.
+                </p>
+                <CodeSwitcher entries={[
+                  { language: "curl", label: "cURL", code: `curl -X POST '${functionsBaseUrl}/pdf-to-images' \\
+  -H 'Authorization: Bearer pdfgen_...' \\
+  -H 'Content-Type: application/json' \\
+  -d '{"pdf":"https://example.com/doc.pdf"}'` },
+                  { language: "javascript", label: "JavaScript", code: `const res = await fetch("${functionsBaseUrl}/pdf-to-images", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: \`Bearer \${process.env.PDFLY_API_KEY}\`,
+  },
+  body: JSON.stringify({ pdf: "https://example.com/doc.pdf" }),
+});
+if (!res.ok) {
+  const err = await res.json().catch(() => ({ message: res.statusText }));
+  throw new Error(\`PDF-to-images failed (\${res.status}): \${err.message}\`);
+}
+const data = await res.json();
+data.pages.forEach(p => console.log("page", p.page, "->", p.url));` },
+                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
+const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
+
+try {
+  const out = await pdfly.pdfToImages({ pdf: "https://example.com/doc.pdf" });
+  out.pages.forEach(p => console.log("page", p.page, "->", p.url));
+} catch (err) {
+  console.error("PDF-to-images failed:", (err as Error).message);
+}` },
+                  { language: "python", label: "Python", code: `import os, requests
+
+resp = requests.post(
+    "${functionsBaseUrl}/pdf-to-images",
+    headers={
+        "Authorization": f"Bearer {os.environ['PDFLY_API_KEY']}",
+        "Content-Type": "application/json",
+    },
+    json={"pdf": "https://example.com/doc.pdf"},
+    timeout=120,
+)
+try:
+    resp.raise_for_status()
+except requests.HTTPError:
+    err = resp.json() if resp.text else {"message": resp.reason}
+    raise RuntimeError(f"pdf-to-images failed ({resp.status_code}): {err.get('message')}")
+
+for p in resp.json()["pages"]:
+    print("page", p["page"], "->", p["url"])` },
+                ]} />
+                <p className="text-xs text-muted-foreground mt-2">Response:</p>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "output_format": "pdf-per-page", "page_count": 3, "pages": [
+  { "page": 1, "url": "...", "size_bytes": 4210 },
+  { "page": 2, "url": "...", "size_bytes": 3980 },
+  { "page": 3, "url": "...", "size_bytes": 4102 }
+]}`}</pre>
+              </div>
+            </Card>
+
+            {/* ===== FREE BROWSER TOOLS ===== */}
+            <Card id="browser-tools" className="p-6 mb-6 border-primary/30 bg-primary/5">
+              <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" /> Free Browser Tools — Zero Upload
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Every tool below runs 100% in your browser. Your files never touch our servers. No API key needed.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {[
+                  { href: "/merge-pdf",     label: "Merge PDF" },
+                  { href: "/split-pdf",     label: "Split PDF" },
+                  { href: "/compress-pdf",  label: "Compress PDF" },
+                  { href: "/pdf-to-images", label: "PDF to Images" },
+                  { href: "/images-to-pdf", label: "Images to PDF" },
+                  { href: "/app",           label: "Text to PDF" },
+                ].map(t => (
+                  <Link key={t.href} to={t.href} className="p-3 rounded-lg border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-colors text-sm font-medium text-center">
+                    {t.label} →
+                  </Link>
+                ))}
+              </div>
+            </Card>
+
+            {/* ===== LOCAL VS CLOUD ===== */}
+            <Card id="local-vs-cloud" className="p-6 mb-6">
+              <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" /> Local vs Cloud Processing
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Browser tools always try your device first. Before a job starts, PDFly measures the
+                selected files against what your device can realistically handle (CPU cores, memory,
+                and platform) and shows one of three verdicts.
+              </p>
+              <div className="overflow-x-auto mb-4">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-2 text-foreground">Verdict</th>
+                      <th className="text-left p-2 text-foreground">What happens</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-muted-foreground">
+                    <tr className="border-b border-border/50">
+                      <td className="p-2 font-medium text-foreground">Safe</td>
+                      <td className="p-2">Runs entirely on your device. No consent box, no network call.</td>
+                    </tr>
+                    <tr className="border-b border-border/50">
+                      <td className="p-2 font-medium text-foreground">Heavy</td>
+                      <td className="p-2">Still tries locally first. An optional consent box lets you allow a cloud retry if the local attempt fails.</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 font-medium text-foreground">Too large</td>
+                      <td className="p-2">Local processing would crash the tab. The job only runs if you tick the consent box.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                The cloud fallback is a separate, anonymous endpoint from the authenticated REST API:
+              </p>
+              <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+                <li>Opt-in per job — never automatic, never remembered across jobs.</li>
+                <li>Processed entirely in memory; the result is returned in the same response.</li>
+                <li><strong className="text-foreground">Zero retention</strong> — no storage bucket write, no database row, no logging of file contents.</li>
+                <li>Hard cap of <strong className="text-foreground">40 MB per job</strong> and 40 files; larger jobs must be split.</li>
+                <li>Best-effort per-IP rate limiting (12 requests/minute) to prevent abuse.</li>
+                <li>No API key required, and nothing is attributed to your account.</li>
+              </ul>
+              <p className="text-sm text-muted-foreground mt-3">
+                By contrast, the authenticated REST API below stores the generated output in a private
+                bucket behind a signed URL and deletes it automatically within 1 hour.
+              </p>
+            </Card>
+
+
 
             {/* ===== 11. RATE LIMITS ===== */}
             <Card id="ratelimits" className="p-6 mb-6">
@@ -1328,7 +1771,7 @@ print(f"Download: {doc_data['document']['download_url']}")` }
                   { title: "Keep content under 50KB for fastest generation", desc: "Documents under 50KB get score 1, allowing 5 per batch." },
                   { title: "Avoid deeply nested tables", desc: "Over 50 tables per document will be rejected. Keep structures simple." },
                   { title: "Download URLs immediately", desc: "URLs expire in 1 hour. Use GET /get-documents?id=ID to refresh." },
-                  { title: "Batch documents wisely", desc: "Up to 5 per request. Check complexity scoring." },
+                  { title: "Batch documents wisely", desc: "Up to 5 documents per request. Check complexity scoring." },
                   { title: "Handle errors & rate limits", desc: "Check 'success' field. For 429, use 'retry_after'. Implement exponential backoff for 500s." },
                   { title: "Rotate API keys", desc: "Use descriptive names, rotate periodically. Revoke unused keys." },
                   { title: "Set correct language", desc: "Use the language parameter for non-Latin scripts." },

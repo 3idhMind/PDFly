@@ -1,4 +1,4 @@
-import { LogIn, LogOut, Menu, X } from "lucide-react";
+import { LogIn, LogOut, Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -7,12 +7,17 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { motion, AnimatePresence } from "framer-motion";
 import type { User } from "@supabase/supabase-js";
+import { TOOLS } from "@/lib/toolsList";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const NAV = [
-  { to: "/create", label: "Create" },
-  { to: "/app", label: "Text to PDF" },
-  { to: "/images-to-pdf", label: "Images to PDF" },
-  { to: "/docs", label: "API Docs" },
+  { to: "/docs", label: "API" },
+  { to: "/api-playground", label: "Playground" },
   { to: "/pricing", label: "Pricing" },
 ];
 
@@ -52,6 +57,29 @@ export const Header = () => {
           </Link>
 
           <nav className="hidden md:flex items-center gap-0.5">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="nav-link inline-flex items-center gap-1 outline-none">
+                All Tools <ChevronDown className="w-3.5 h-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-72">
+                {TOOLS.map((t) => (
+                  <DropdownMenuItem key={t.href} asChild>
+                    <Link to={t.href} className="flex items-start gap-2.5 cursor-pointer">
+                      <t.icon className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                      <span>
+                        <span className="block text-sm font-medium">{t.label}</span>
+                        <span className="block text-xs text-muted-foreground">{t.desc}</span>
+                      </span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem asChild>
+                  <Link to="/create" className="text-sm font-medium text-primary cursor-pointer">
+                    View all tools →
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {NAV.map(n => (
               <Link key={n.to} to={n.to} className="nav-link">{n.label}</Link>
             ))}
@@ -62,9 +90,14 @@ export const Header = () => {
             {user ? (
               <ProfileMenu user={user} />
             ) : (
-              <Button size="sm" variant="ghost" asChild className="text-sm">
-                <Link to="/auth"><LogIn className="w-3.5 h-3.5 mr-1.5" /> Sign In</Link>
+              <Button
+                size="sm"
+                asChild
+                className="text-[13px] rounded-lg px-4 h-9 font-semibold tracking-tight bg-foreground text-background hover:bg-foreground/90 shadow-sm transition-colors"
+              >
+                <Link to="/auth"><LogIn className="w-3.5 h-3.5 mr-1.5" /> Sign in</Link>
               </Button>
+
             )}
           </div>
 
@@ -91,23 +124,34 @@ export const Header = () => {
               <span className="font-display font-bold text-[22px]">PDFly</span>
               <Button variant="ghost" size="sm" onClick={closeMenu} aria-label="Close menu"><X className="w-5 h-5" /></Button>
             </div>
-            <nav className="flex-1 flex flex-col justify-center px-8 gap-2">
-              {NAV.map((n, i) => (
-                <motion.div
-                  key={n.to}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.05 + i * 0.06, duration: 0.35, ease: "easeOut" }}
-                >
+            <nav className="flex-1 overflow-y-auto px-6 py-6">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">All tools</p>
+              <div className="grid grid-cols-2 gap-2 mb-7">
+                {TOOLS.map((t) => (
                   <Link
+                    key={t.href}
+                    to={t.href}
+                    onClick={closeMenu}
+                    className="p-3 rounded-xl border border-border bg-card hover:border-primary/40 transition-colors"
+                  >
+                    <t.icon className="w-4 h-4 text-primary mb-1.5" />
+                    <span className="block text-sm font-medium leading-tight">{t.label}</span>
+                  </Link>
+                ))}
+              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">More</p>
+              <div className="flex flex-col">
+                {NAV.map((n) => (
+                  <Link
+                    key={n.to}
                     to={n.to}
                     onClick={closeMenu}
-                    className="block font-display text-4xl font-bold tracking-tight py-3 text-foreground hover:text-primary transition-colors"
+                    className="font-display text-2xl font-bold tracking-tight py-2.5 text-foreground hover:text-primary transition-colors"
                   >
                     {n.label}
                   </Link>
-                </motion.div>
-              ))}
+                ))}
+              </div>
             </nav>
             <div className="p-6 border-t border-border">
               {user ? (
@@ -115,9 +159,10 @@ export const Header = () => {
                   <LogOut className="w-4 h-4 mr-2" /> Sign out
                 </Button>
               ) : (
-                <Button className="w-full h-12 text-base" asChild onClick={closeMenu}>
-                  <Link to="/auth"><LogIn className="w-4 h-4 mr-2" /> Sign In</Link>
+                <Button className="w-full h-12 text-base rounded-lg font-semibold bg-foreground text-background hover:bg-foreground/90" asChild onClick={closeMenu}>
+                  <Link to="/auth"><LogIn className="w-4 h-4 mr-2" /> Sign in</Link>
                 </Button>
+
               )}
             </div>
           </motion.div>

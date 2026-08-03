@@ -14,14 +14,30 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth: require any bearer token. This function only purges expired data
-  // (idempotent, owns no user-specific output), so accepting any authenticated
-  // caller (cron, service-role, or signed-in user) is safe.
+  // Auth: require the shared cleanup secret OR the Supabase service-role key.
+  // Any other bearer (including valid user JWTs) is rejected — this endpoint
+  // performs irreversible bulk deletion and must not be user-callable.
   const authHeader = req.headers.get("Authorization") || "";
-  if (!authHeader.startsWith("Bearer ") || authHeader.length < 20) {
-    return jsonResponse(401, { error: "UNAUTHORIZED", message: "Invalid or missing authorization" });
-  }
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const cleanupSecret = Deno.env.get("CLEANUP_SECRET") || "";
+
+  if (!authHeader.startsWith("Bearer ")) {
+    return jsonResponse(401, { error: "UNAUTHORIZED", message: "Missing bearer token" });
+  }
+  const token = authHeader.slice(7).trim();
+
+  const enc = new TextEncoder();
+  const eqCT = (a: string, b: string) => {
+    if (!a || !b || a.length !== b.length) return false;
+    const ab = enc.encode(a), bb = enc.encode(b);
+    let diff = 0;
+    for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+    return diff === 0;
+  };
+  const authorized = eqCT(token, supabaseServiceRoleKey) || (cleanupSecret && eqCT(token, cleanupSecret));
+  if (!authorized) {
+    return jsonResponse(401, { error: "UNAUTHORIZED", message: "Invalid credentials" });
+  }
 
   try {
     const supabase = createClient(

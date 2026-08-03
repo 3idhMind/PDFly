@@ -23,7 +23,10 @@ import {
   type ImageFile, type ConversionOptions, type FitMode, type Orientation, type ImageQuality
 } from "@/lib/imageConverter";
 import { motion } from "framer-motion";
-import { checkFreeGate, consumeFreeGeneration } from "@/lib/freeGenerationGate";
+import { CapabilityNotice } from "@/components/CapabilityNotice";
+import { useProcessingPlan } from "@/hooks/useProcessingPlan";
+import { runInCloud, withCloudFallback } from "@/lib/cloudFallback";
+
 
 const PAGE_SIZES = ["A4", "A3", "A5", "Letter", "Legal", "Tabloid", "B5", "Executive"];
 
@@ -40,6 +43,10 @@ const ImagesToPdf = () => {
   });
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { plan, cloudConsent, setCloudConsent, blocked } = useProcessingPlan(
+    images.reduce((s, i) => s + i.file.size, 0),
+  );
+
 
   const handleFilesSelected = useCallback(async (files: File[]) => {
     const newImages = files.map(createImageFile);
@@ -79,23 +86,29 @@ const ImagesToPdf = () => {
   const handleConvert = async () => {
     if (images.length === 0) return;
 
-    const gate = await checkFreeGate();
-    if (!gate.allowed) {
-      toast({
-        title: "Sign in to keep generating",
-        description: "You've used your free generation. Create a free account to continue.",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
-
     setConverting(true);
     setProgress({ current: 0, total: images.length });
 
     try {
-      const blob = await convertImagesToPdf(images, options, (current, total) => {
-        setProgress({ current, total });
+      const { result: blob, usedCloud } = await withCloudFallback({
+        allowCloud: cloudConsent,
+        skipLocal: plan?.level === "too-large",
+        local: () =>
+          convertImagesToPdf(images, options, (current, total) => {
+            setProgress({ current, total });
+          }),
+        cloud: async () => {
+          const parts = await runInCloud(
+            "images-to-pdf",
+            images.map((i) => i.file),
+          );
+          return parts[0].blob;
+        },
+        onFallback: () =>
+          toast({
+            title: "Switching to secure cloud",
+            description: "Too heavy for this device. Processed in memory and deleted instantly.",
+          }),
       });
 
       const url = URL.createObjectURL(blob);
@@ -106,13 +119,22 @@ const ImagesToPdf = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      await consumeFreeGeneration();
+      toast({
+        title: "PDF ready!",
+        description: `${images.length} image${images.length > 1 ? "s" : ""} converted ${usedCloud ? "via secure cloud" : "on your device"}.`,
+      });
     } catch (err) {
       console.error("Conversion failed:", err);
+      toast({
+        title: "Conversion failed",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
     } finally {
       setConverting(false);
     }
   };
+
 
   const totalSize = getTotalSize(images);
   const progressPercent = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
@@ -315,25 +337,30 @@ const ImagesToPdf = () => {
                     </span>
                   </div>
 
+                  {images.length > 0 && (
+                    <CapabilityNotice
+                      plan={plan}
+                      cloudConsent={cloudConsent}
+                      onCloudConsentChange={setCloudConsent}
+                    />
+                  )}
+
                   {/* Convert button */}
                   <Button
                     className="w-full"
                     size="lg"
                     onClick={handleConvert}
-                    disabled={images.length === 0 || converting}
+                    disabled={images.length === 0 || converting || blocked}
                   >
                     {converting ? (
                       <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Converting...</>
+                    ) : blocked ? (
+                      <>Allow cloud processing to continue</>
                     ) : (
                       <><Download className="w-4 h-4 mr-2" /> Convert to PDF ({images.length} pages)</>
                     )}
                   </Button>
 
-                  {totalSize > 500 * 1024 * 1024 && (
-                    <p className="text-xs text-destructive text-center">
-                      ⚠️ Total size exceeds 500MB. Performance may be affected.
-                    </p>
-                  )}
                 </div>
               </Card>
             </div>

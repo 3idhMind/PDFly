@@ -1,157 +1,92 @@
 import { Link } from "react-router-dom";
-import { FileText, ImagePlus, Globe, Layout, Layers, Upload, GripVertical, Sparkles, ShieldCheck, Server } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
-import { motion } from "framer-motion";
-
-const features = [
-  {
-    title: "Text to PDF",
-    badge: "Client-side · Browser-only",
-    description:
-      "Transform raw text, code snippets, or documents into beautifully formatted PDFs with full control over language, page size, and template.",
-    icon: FileText,
-    link: "/app",
-    cta: "Convert Your Text to PDF",
-    gradient: "from-primary to-accent",
-    metadata: [
-      { icon: Globe, label: "70+ Languages" },
-      { icon: Layout, label: "15+ Templates" },
-      { icon: Layers, label: "Zero Upload" },
-    ],
-  },
-  {
-    title: "Image to PDF",
-    badge: "Client-side · Browser-only",
-    description:
-      "Combine multiple images — JPG, PNG, WebP, HEIC, and 25+ formats — into a single, organized PDF document with drag-and-drop reordering.",
-    icon: ImagePlus,
-    link: "/images-to-pdf",
-    cta: "Convert Your Images to PDF",
-    gradient: "from-accent to-primary",
-    metadata: [
-      { icon: Upload, label: "25+ Image Formats" },
-      { icon: Layers, label: "100+ Images at Once" },
-      { icon: GripVertical, label: "Drag & Drop Reorder" },
-    ],
-  },
-];
+import { SITE_URL } from "@/lib/config";
+import { TOOLS } from "@/lib/toolsList";
+import { ArrowRight, ShieldCheck, Zap, BadgeCheck } from "lucide-react";
 
 const Create = () => {
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
-        title="Create — PDFly | Text to PDF & Image to PDF"
-        description="Choose your conversion tool: transform text into formatted PDFs or merge multiple images into a single document."
+        title="All PDF Tools — Merge, Split, Compress & Convert Free | PDFly"
+        description="Pick a free PDF tool: merge, split, compress, PDF to images, images to PDF, and text to PDF. Everything runs in your browser — no upload, no signup."
+        canonical={`${SITE_URL}/create`}
       />
-      <div className="min-h-screen bg-background flex flex-col">
-        <Header />
+      <Header />
 
-        <main className="flex-1 container mx-auto px-4 py-12 max-w-5xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-              <Sparkles className="w-4 h-4" />
-              Choose Your Tool
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold font-display text-foreground mb-3">
-              What would you like to create?
-            </h1>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Pick a conversion tool below and start generating professional PDFs in seconds.
+      <main className="container mx-auto px-5 py-12 md:py-16 max-w-6xl flex-1">
+        <div className="max-w-2xl">
+          <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            Choose a PDF tool
+          </h1>
+          <p className="mt-3 text-lg text-muted-foreground">
+            Six tools, zero uploads. Everything below runs locally in your browser — free, no
+            watermark, no account needed.
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-wrap gap-2.5 text-xs">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/25 bg-primary/5 text-foreground">
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Files never leave your device
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-muted-foreground">
+            <Zap className="w-3.5 h-3.5 text-primary" /> Instant, offline-capable
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-muted-foreground">
+            <BadgeCheck className="w-3.5 h-3.5 text-primary" /> Free forever
+          </span>
+        </div>
+
+        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {TOOLS.map((tool) => (
+            <Link
+              key={tool.href}
+              to={tool.href}
+              className="group relative p-6 rounded-2xl border border-border bg-card hover:border-primary/50 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all"
+            >
+              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                <tool.icon className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="font-display text-lg font-semibold text-foreground">{tool.label}</h2>
+              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  {tool.accepts}
+                </span>
+                <ArrowRight className="w-4 h-4 text-primary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-12 rounded-2xl border border-border bg-muted/30 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-display text-lg font-semibold text-foreground">Building something?</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Every tool is also a REST endpoint. Free API keys, generous limits.
             </p>
-          </motion.div>
-
-          <div className="mb-8 rounded-2xl border border-border/60 bg-card p-5">
-            <div className="grid sm:grid-cols-2 gap-4 text-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-                  <ShieldCheck className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">Web UI = 100% Client-Side</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    Both tools below run entirely in your browser. Your text, files, and images never leave your device. Zero upload, zero leak.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-accent/10 shrink-0">
-                  <Server className="w-4 h-4 text-accent" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">REST API = Server-Side</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    For programmatic access only. Required so developers can call PDFly from servers, scripts, and automations. <Link to="/docs" className="text-primary hover:underline">View API docs →</Link>
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            {features.map((feat, i) => (
-              <motion.div
-                key={feat.title}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.15 }}
-              >
-                <Card className="h-full flex flex-col p-8 bg-card border border-border/60 shadow-md hover:shadow-lg transition-shadow duration-300">
-                  <div
-                    className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feat.gradient} flex items-center justify-center mb-6 shadow-md`}
-                  >
-                    <feat.icon className="w-7 h-7 text-primary-foreground" />
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <h2 className="text-2xl font-bold font-display text-foreground">
-                      {feat.title}
-                    </h2>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                      <ShieldCheck className="w-3 h-3" />
-                      {feat.badge}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed mb-6 flex-1">
-                    {feat.description}
-                  </p>
-
-                  <div className="flex flex-wrap gap-3 mb-8">
-                    {feat.metadata.map((m) => (
-                      <span
-                        key={m.label}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground"
-                      >
-                        <m.icon className="w-3.5 h-3.5" />
-                        {m.label}
-                      </span>
-                    ))}
-                  </div>
-
-                  <Button
-                    asChild
-                    size="lg"
-                    className={`w-full bg-gradient-to-r ${feat.gradient} hover:opacity-90 transition-opacity`}
-                  >
-                    <Link to={feat.link}>{feat.cta}</Link>
-                  </Button>
-                </Card>
-              </motion.div>
-            ))}
+          <div className="flex gap-2 shrink-0">
+            <Link
+              to="/docs"
+              className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full border border-border hover:border-primary/40 transition-colors"
+            >
+              API docs
+            </Link>
+            <Link
+              to="/api-playground"
+              className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            >
+              Try it live <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-        </main>
+        </div>
+      </main>
 
-        <Footer />
-      </div>
-    </>
+      <Footer />
+    </div>
   );
 };
 

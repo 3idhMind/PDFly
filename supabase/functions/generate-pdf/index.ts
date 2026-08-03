@@ -689,16 +689,59 @@ Deno.serve(async (req) => {
   }
 
   const startTime = Date.now();
+  const requestId = crypto.randomUUID();
+  const reqIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("cf-connecting-ip") ?? "unknown";
+  const reqUa = req.headers.get("user-agent");
+  const traceAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  const trace = async (res: Response, userId?: string | null, apiKeyId?: string | null, error?: string) => {
+    try {
+      await traceAdmin.from("api_request_logs").insert({
+        request_id: requestId,
+        endpoint: "/api/generate-pdf",
+        method: req.method,
+        status_code: res.status,
+        latency_ms: Date.now() - startTime,
+        ip_address: reqIp,
+        user_id: userId ?? null,
+        api_key_id: apiKeyId ?? null,
+        error: error ?? null,
+      });
+    } catch (e) { console.error("trace failed:", e); }
+    return res;
+  };
+
+  const secEvent = async (
+    eventType: string,
+    severity: "info" | "warning" | "critical",
+    details: Record<string, unknown>,
+    userId?: string | null,
+  ) => {
+    try {
+      await traceAdmin.from("security_events").insert({
+        event_type: eventType, severity, user_id: userId ?? null,
+        ip_address: reqIp, user_agent: reqUa,
+        details: { endpoint: "/api/generate-pdf", ...details },
+      });
+    } catch (e) { console.error("secEvent failed:", e); }
+  };
 
   try {
     const contentLength = req.headers.get("content-length");
     if (contentLength && parseInt(contentLength) > MAX_BODY_SIZE) {
-      return jsonResponse(413, { error: "PAYLOAD_TOO_LARGE", message: "Request body must be under 5MB" });
+      await secEvent("payload_too_large", "warning", { content_length: contentLength });
+      return trace(jsonResponse(413, { error: "PAYLOAD_TOO_LARGE", message: "Request body must be under 5MB" }));
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return jsonResponse(401, { error: "INVALID_KEY", message: "Missing Authorization header" });
+      await secEvent("auth_rejected", "warning", { reason: "missing_authorization" });
+      return trace(jsonResponse(401, { error: "INVALID_KEY", message: "Missing Authorization header" }));
     }
 
     const supabaseAdmin = createClient(
@@ -707,7 +750,10 @@ Deno.serve(async (req) => {
     );
 
     const auth = await authenticate(authHeader, supabaseAdmin);
-    if (auth.error) return auth.error;
+    if (auth.error) {
+      await secEvent("auth_rejected", "warning", { reason: "invalid_credentials" });
+      return trace(auth.error);
+    }
     const { userId, authType, apiKeyId, rateLimitPerMin } = auth.result!;
 
     // ── Rate limiting ──
@@ -723,11 +769,12 @@ Deno.serve(async (req) => {
 
       if ((count ?? 0) >= JWT_RATE_LIMIT) {
         const retryAfter = Math.ceil(JWT_RATE_WINDOW_MS / 1000);
-        return jsonResponse(429, {
+        await secEvent("rate_limited", "warning", { auth_type: "jwt" }, userId);
+        return trace(jsonResponse(429, {
           error: "RATE_LIMITED",
           message: "Please wait, the server is processing your previous requests. Try again in a few minutes.",
           retry_after: retryAfter,
-        });
+        }), userId, apiKeyId);
       }
     }
 
@@ -741,11 +788,12 @@ Deno.serve(async (req) => {
         .gte("created_at", oneMinuteAgo);
 
       if ((count ?? 0) >= rateLimitPerMin) {
-        return jsonResponse(429, {
+        await secEvent("rate_limited", "warning", { auth_type: "apikey" }, userId);
+        return trace(jsonResponse(429, {
           error: "RATE_LIMITED",
           message: `Rate limit exceeded. Max ${rateLimitPerMin} requests/minute.`,
           retry_after: 60,
-        });
+        }), userId, apiKeyId);
       }
     }
 
@@ -956,7 +1004,7 @@ Deno.serve(async (req) => {
       ]);
     }
 
-    return jsonResponse(200, {
+    return trace(jsonResponse(200, {
       success: true,
       api_version: "v1",
       documents: resultDocs,
@@ -971,9 +1019,13 @@ Deno.serve(async (req) => {
         processing_time_ms: processingTime,
         bytes_processed: totalBytes,
       },
-    });
+    }), userId, apiKeyId);
   } catch (err) {
     console.error("generate-pdf error:", err);
-    return jsonResponse(500, { error: "GENERATION_FAILED", message: "Internal server error" });
+    await secEvent("endpoint_error", "critical", { error: (err as Error).message });
+    return trace(
+      jsonResponse(500, { error: "GENERATION_FAILED", message: "Internal server error" }),
+      null, null, (err as Error).message,
+    );
   }
 });

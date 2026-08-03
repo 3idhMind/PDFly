@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Mail } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Mail, Eye, EyeOff } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { SEOHead } from "@/components/SEOHead";
 import { SITE_URL } from "@/lib/config";
 
@@ -16,11 +16,16 @@ const Auth = () => {
   const [view, setView] = useState<AuthView>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Preserve a same-origin `next` param so the OAuth consent flow returns here.
+  const rawNext = searchParams.get("next") ?? "";
+  const safeNext = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,13 +47,13 @@ const Auth = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast({ title: "Welcome back!", description: "Logged in successfully" });
-        navigate("/");
+        navigate(safeNext);
       } else {
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}${safeNext}`,
             data: { display_name: displayName || email },
           },
         });
@@ -121,8 +126,28 @@ const Auth = () => {
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
 
+          {view !== "forgot" && (
+            <div className="inline-flex p-1 rounded-full bg-muted mb-6 w-full max-w-xs">
+              {(["login", "signup"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setView(v)}
+                  className={`flex-1 h-9 rounded-full text-sm font-medium transition-colors ${
+                    view === v
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {v === "login" ? "Sign in" : "Create account"}
+                </button>
+              ))}
+            </div>
+          )}
+
           <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2 tracking-tight">{title}</h1>
           <p className="text-muted-foreground text-sm mb-8">{subtitle}</p>
+
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {view === "signup" && (
@@ -138,7 +163,20 @@ const Auth = () => {
             {view !== "forgot" && (
               <div className="space-y-1.5">
                 <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="h-12 rounded-full px-5 focus-visible:ring-primary" />
+                <div className="relative">
+                  <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="h-12 rounded-full px-5 pr-12 focus-visible:ring-primary" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {view === "signup" && (
+                  <p className="text-[11px] text-muted-foreground pl-5">At least 6 characters.</p>
+                )}
               </div>
             )}
             {view === "signup" && (

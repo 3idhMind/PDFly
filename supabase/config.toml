@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.images-to-pdf]
 verify_jwt = false
+
+[functions.report-issue]
+verify_jwt = false
+
+[functions.pdf-fallback]
+verify_jwt = false

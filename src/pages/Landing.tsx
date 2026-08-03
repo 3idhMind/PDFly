@@ -12,8 +12,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { SITE_URL } from "@/lib/config";
 import {
-  Code, Shield, Languages, ArrowRight, Star, Send, Lock, Globe, Palette, Check
+  Code, Shield, Languages, ArrowRight, Star, Send, Lock, Globe, Palette, Check, Sparkles,
+  Combine, Scissors, Minimize2, Image as ImageIcon, FileText, Images,
 } from "lucide-react";
+
+const FREE_TOOLS = [
+  { href: "/merge-pdf",     icon: Combine,   label: "Merge PDF",     desc: "Combine multiple PDFs into one." },
+  { href: "/split-pdf",     icon: Scissors,  label: "Split PDF",     desc: "Extract pages or ranges." },
+  { href: "/compress-pdf",  icon: Minimize2, label: "Compress PDF",  desc: "Shrink files without losing quality." },
+  { href: "/pdf-to-images", icon: ImageIcon, label: "PDF to Images", desc: "Convert pages to PNG or JPG." },
+  { href: "/images-to-pdf", icon: Images,    label: "Images to PDF", desc: "Bundle photos into a PDF." },
+  { href: "/app",           icon: FileText,  label: "Text to PDF",   desc: "Beautiful PDFs from plain text." },
+];
 
 const TICKER = [
   "70+ Languages", "25+ Image Formats", "15 Templates", "100% Free & Private",
@@ -92,7 +102,7 @@ const Landing = () => {
 
               <div className="animate-fade-up flex flex-col sm:flex-row gap-3" style={{ animationDelay: "300ms" }}>
                 <Button asChild size="lg" className="h-12 px-7 rounded-full text-base bg-primary hover:bg-primary/90 text-primary-foreground btn-press animate-pulse-glow">
-                  <Link to="/app">Start Generating — Free <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
+                  <Link to="/create">Start Generating — Free <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="h-12 px-6 rounded-full text-base border-foreground/20 hover:bg-foreground hover:text-background btn-press font-mono">
                   <Link to="/docs">{"</>"} API Documentation</Link>
@@ -169,6 +179,44 @@ const Landing = () => {
                 {item}
                 <span className="ml-12 w-1.5 h-1.5 rounded-full bg-primary" />
               </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FREE TOOLS ─────────────────────────────────────── */}
+      <section className="py-20 border-t border-border">
+        <div className="container mx-auto px-5 max-w-7xl">
+          <div className="mb-10 flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs font-mono text-primary mb-2 uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" /> Free tools
+              </div>
+              <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">
+                Every PDF tool.{" "}
+                <span className="font-serif-display italic font-normal text-muted-foreground">One local browser.</span>
+              </h2>
+            </div>
+            <p className="text-muted-foreground max-w-sm text-sm">
+              All tools run 100% in your browser. No upload. No signup. No watermark. No limits.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {FREE_TOOLS.map((t) => (
+              <Link
+                key={t.href}
+                to={t.href}
+                className="group p-5 rounded-2xl border border-border bg-card hover:border-primary/40 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.12)] transition-all"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <t.icon className="w-5 h-5" />
+                </div>
+                <h3 className="font-display font-bold text-lg mb-1">{t.label}</h3>
+                <p className="text-sm text-muted-foreground leading-snug">{t.desc}</p>
+                <span className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                  Open <ArrowRight className="w-3 h-3" />
+                </span>
+              </Link>
             ))}
           </div>
         </div>
@@ -358,7 +406,7 @@ const Landing = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg" className="h-12 px-7 rounded-full text-base bg-primary hover:bg-primary/90 btn-press animate-pulse-glow">
-              <Link to="/app">Open Generator <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
+              <Link to="/create">Explore All Tools <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="h-12 px-6 rounded-full text-base border-foreground/20 hover:bg-foreground hover:text-background btn-press font-mono">
               <Link to="/docs">{"</>"} Read the API Docs</Link>

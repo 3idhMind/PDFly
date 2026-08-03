@@ -37,7 +37,7 @@ export const CodeSwitcher = ({ title, entries }: CodeSwitcherProps) => {
         <div className="flex gap-0 overflow-x-auto">
           {entries.map((entry, i) => (
             <button
-              key={entry.language}
+              key={`${entry.language}-${i}`}
               onClick={() => setActiveIndex(i)}
               className={`px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap border-b-2 ${
                 i === activeIndex

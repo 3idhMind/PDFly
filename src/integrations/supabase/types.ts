@@ -232,6 +232,30 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          count: number
+          endpoint: string
+          id: string
+          subject: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          endpoint: string
+          id?: string
+          subject: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          endpoint?: string
+          id?: string
+          subject?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
           created_at: string

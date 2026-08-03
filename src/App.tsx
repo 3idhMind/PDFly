@@ -24,6 +24,14 @@ import TextToPdfFeature from "./pages/TextToPdfFeature";
 import ImageToPdfFeature from "./pages/ImageToPdfFeature";
 import Create from "./pages/Create";
 import AdminSecurity from "./pages/AdminSecurity";
+import MergePdf from "./pages/MergePdf";
+import SplitPdf from "./pages/SplitPdf";
+import CompressPdf from "./pages/CompressPdf";
+import PdfToImages from "./pages/PdfToImages";
+import ApiPlayground from "./pages/ApiPlayground";
+import { ScrollToTop } from "./components/ScrollToTop";
+
+
 
 const queryClient = new QueryClient();
 
@@ -35,6 +43,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/app" element={<Index />} />
@@ -53,6 +62,11 @@ const App = () => (
               <Route path="/images-to-pdf" element={<ImagesToPdf />} />
               <Route path="/text-to-pdf" element={<TextToPdfFeature />} />
               <Route path="/image-to-pdf" element={<ImageToPdfFeature />} />
+              <Route path="/merge-pdf" element={<MergePdf />} />
+              <Route path="/split-pdf" element={<SplitPdf />} />
+              <Route path="/compress-pdf" element={<CompressPdf />} />
+              <Route path="/pdf-to-images" element={<PdfToImages />} />
+              <Route path="/api-playground" element={<ApiPlayground />} />
               <Route path="/admin/security" element={<AdminSecurity />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
