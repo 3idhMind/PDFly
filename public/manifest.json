@@ -1,0 +1,16 @@
+{
+  "name": "PDFly by 3idhMind",
+  "short_name": "PDFly",
+  "description": "Generate beautiful PDFs from HTML/text in 70+ languages. Free REST API, 15 templates, batch generation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6C63FF",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

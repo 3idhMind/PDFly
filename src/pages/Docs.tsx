@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Code, Copy, BookOpen, Zap, Globe, FileText, AlertTriangle, Gauge, Lightbulb, Download, ImageIcon, ChevronDown, Check, Shield } from "lucide-react";
@@ -227,6 +228,28 @@ const Docs = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead title="PDFly API Documentation — REST API for PDF Generation | 3idhMind" description="Complete API documentation for PDFly. Generate PDFs with 70+ languages, 15 templates, batch processing. Free REST API by 3idhMind." keywords="PDF API documentation, REST API PDF generation, PDFly API docs, HTML to PDF API, 3idhMind API" canonical={`${SITE_URL}/docs`} />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "TechArticle",
+          "headline": "PDFly REST API Documentation — PDF Generation in 70+ Languages",
+          "description": "Complete reference for the PDFly REST API. Generate PDFs from HTML/text in 70+ languages, convert images, merge, split, and compress PDFs programmatically.",
+          "author": { "@type": "Organization", "name": "3idhMind", "url": SITE_URL },
+          "publisher": { "@type": "Organization", "name": "PDFly by 3idhMind", "url": SITE_URL },
+          "url": `${SITE_URL}/docs`,
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            { "@type": "Question", "name": "How do I authenticate with the PDFly API?", "acceptedAnswer": { "@type": "Answer", "text": "Include your API key in the Authorization header as a Bearer token: `Authorization: Bearer pdfgen_YOUR_KEY`. Get your key from Settings after creating a free account." } },
+            { "@type": "Question", "name": "How do I generate a PDF using the PDFly API?", "acceptedAnswer": { "@type": "Answer", "text": "Send a POST request to https://pdfly.3idhmind.in/api/generate-pdf with a JSON body containing a `documents` array. Each document has a `title` and `content` (HTML or plain text). Set `template`, `page_size`, and `language` parameters." } },
+            { "@type": "Question", "name": "Does the PDFly API support Hindi, Arabic, and Chinese PDF generation?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Set `language: 'hi'` for Hindi (Devanagari), `language: 'ar'` for Arabic (RTL auto-applied), `language: 'zh'` for Chinese. PDFly embeds the correct Noto fonts automatically." } },
+            { "@type": "Question", "name": "What is the rate limit for the PDFly API?", "acceptedAnswer": { "@type": "Answer", "text": "60 requests per minute per API key. Each batch request can contain up to 5 documents. Generated PDFs are auto-deleted after 1 hour." } },
+            { "@type": "Question", "name": "How many images can I convert to PDF via the API?", "acceptedAnswer": { "@type": "Answer", "text": "The API supports up to 20 images per request. The web UI at /images-to-pdf supports 100+ images and processes them entirely in your browser." } },
+          ]
+        })}</script>
+      </Helmet>
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-5xl flex-1">
         <div className="flex gap-8 relative">

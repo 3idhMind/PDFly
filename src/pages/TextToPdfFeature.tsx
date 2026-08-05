@@ -38,12 +38,24 @@ const TextToPdfFeature = () => {
         <link rel="canonical" href={`${SITE_URL}/text-to-pdf`} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "SoftwareApplication",
-          name: "PDFly Text to PDF",
-          applicationCategory: "UtilitiesApplication",
-          operatingSystem: "Web",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
-          description: "Convert text, HTML, and markdown to PDF in 70+ languages with 15 templates",
+          "@graph": [
+            {
+              "@type": "SoftwareApplication",
+              name: "PDFly Text to PDF",
+              applicationCategory: "UtilitiesApplication",
+              operatingSystem: "Web",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+              description: "Convert text, HTML, and markdown to PDF in 70+ languages with 15 templates",
+            },
+            {
+              "@type": "FAQPage",
+              "mainEntity": [
+                { "@type": "Question", "name": "How do I convert HTML to PDF in 70+ languages?", "acceptedAnswer": { "@type": "Answer", "text": "PDFly converts any HTML or plain text to PDF in 70+ languages. Set the language parameter in the API (e.g., `language: 'hi'` for Hindi) or use the web UI which auto-detects the script and applies the correct Noto font." } },
+                { "@type": "Question", "name": "Does PDFly support RTL languages like Arabic and Hebrew?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. PDFly has full RTL support for Arabic, Hebrew, Urdu, and Persian. Text direction, bidirectional number rendering, and table alignment are all handled automatically." } },
+                { "@type": "Question", "name": "How many PDFs can I batch-generate at once?", "acceptedAnswer": { "@type": "Answer", "text": "You can generate up to 5 PDFs in a single API call using the `documents` array. For larger batches, loop through in groups of 5." } },
+              ]
+            }
+          ]
         })}</script>
       </Helmet>
       <Header />

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
@@ -65,10 +66,50 @@ const Landing = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
         title="PDFly — Free PDF API. Your files never leave your browser."
-        description="PDFly by 3idhMinds: free, private PDF generator and REST API. Text & images to PDF in 70+ languages — 100% client-side. No upload, no tracking."
-        keywords="free PDF API, private PDF generator, text to PDF, image to PDF, client-side PDF, HTML to PDF, REST API PDF, PDFly, 3idhMinds"
+        description="PDFly by 3idhMind: free, private PDF generator and REST API. Text & images to PDF in 70+ languages — 100% client-side. No upload, no tracking."
+        keywords="free PDF API, private PDF generator, text to PDF, image to PDF, client-side PDF, HTML to PDF, REST API PDF, PDFly, 3idhMind"
         canonical={SITE_URL}
       />
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is PDFly and what can it do?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PDFly by 3idhMind is a free universal PDF generation platform and REST API. It converts HTML/text to PDF in 70+ languages including Hindi, Arabic RTL, Chinese, and Japanese, with 15 professional templates. It also converts 100+ images (JPG, PNG, HEIC, RAW) to PDF entirely in your browser — your files never leave your device."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is PDFly really free? Are there any limits?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, PDFly is 100% free. No credit card required. The REST API allows 60 requests per minute and up to 5 documents per batch request. All browser-based tools (merge, split, compress, image-to-PDF) are fully unlimited."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do I generate a PDF in Hindi, Arabic, or Chinese?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PDFly natively supports 70+ languages. To generate a Hindi PDF, set `language: 'hi'` in the API request. For Arabic, use `language: 'ar'` and RTL layout is applied automatically. No font installation required."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I use PDFly without an account?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. All browser tools (merge, split, compress, image-to-PDF, PDF-to-images) work without any account. The REST API requires a free account to generate an API key."
+              }
+            }
+          ]
+        })}</script>
+      </Helmet>
       <Header />
 
       {/* HERO ───────────────────────────────────────────── */}

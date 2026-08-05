@@ -16,6 +16,10 @@
     <meta name="author" content="3idhMind" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#6C63FF" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PDFly" />
     <link rel="canonical" href="https://pdfly.3idhmind.in" />
 
     
@@ -33,30 +37,63 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "PDFly",
-      "description": "Free universal PDF generation platform with REST API support for 70+ languages and 15 templates. By 3idhMind.",
-      "url": "https://pdfly.3idhmind.in",
-      "applicationCategory": "Productivity",
-      "operatingSystem": "Web",
-      "creator": {
-        "@type": "Organization",
-        "name": "3idhMind",
-        "url": "https://3idhmind.in"
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "INR"
-      },
-      "featureList": [
-        "70+ language support",
-        "15 professional templates",
-        "REST API access",
-        "RTL language support",
-        "11 page sizes",
-        "Batch PDF generation",
-        "Free during beta"
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "name": "PDFly",
+          "description": "Free universal PDF generation platform with REST API support for 70+ languages and 15 templates. By 3idhMind.",
+          "url": "https://pdfly.3idhmind.in",
+          "applicationCategory": "Productivity",
+          "operatingSystem": "Web",
+          "creator": {
+            "@type": "Organization",
+            "name": "3idhMind",
+            "url": "https://3idhmind.in"
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "INR"
+          },
+          "featureList": [
+            "70+ language support",
+            "15 professional templates",
+            "REST API access",
+            "RTL language support",
+            "11 page sizes",
+            "Batch PDF generation",
+            "Free during beta"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is PDFly?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "PDFly by 3idhMind is a free universal PDF generation platform and REST API supporting 70+ languages including Hindi, Arabic RTL, Chinese, Japanese, Korean, and 15 professional templates."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How to convert HTML to PDF using a free REST API?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Send a POST request to https://pdfly.3idhmind.in/api/generate-pdf with JSON payload containing your HTML string in the 'content' field and your API key in the Authorization header."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does PDFly support Hindi Devanagari and Arabic RTL fonts?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, PDFly natively auto-detects and renders Devanagari (Hindi, Marathi), Arabic/Urdu (Right-to-Left), CJK, and 70+ languages without font rendering corruption."
+              }
+            }
+          ]
+        }
       ]
     }
     </script>

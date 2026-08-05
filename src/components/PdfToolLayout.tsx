@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -50,10 +51,10 @@ export const PdfToolLayout = ({ slug, title, metaTitle, metaDescription, tagline
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead title={metaTitle} description={metaDescription} canonical={canonical} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareLd) }} />
-      {faqLd && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
-      )}
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(softwareLd)}</script>
+        {faqLd && <script type="application/ld+json">{JSON.stringify(faqLd)}</script>}
+      </Helmet>
       <Header />
 
       <main className="flex-1 container mx-auto px-5 py-10 md:py-14 max-w-4xl">

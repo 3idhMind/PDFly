@@ -34,6 +34,15 @@ const Pricing = () => {
             { "@type": "Offer", name: "Pro", price: "0", priceCurrency: "INR", availability: "https://schema.org/PreOrder" },
           ],
         })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            { "@type": "Question", "name": "Is PDFly free to use?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, PDFly is 100% free during the beta period. No credit card required. All features including the REST API, 15 templates, 70+ language support, and browser tools are completely free." } },
+            { "@type": "Question", "name": "What are PDFly's API rate limits?", "acceptedAnswer": { "@type": "Answer", "text": "The free tier allows 60 API requests per minute per API key, with up to 5 documents per batch request." } },
+            { "@type": "Question", "name": "Will PDFly always be free?", "acceptedAnswer": { "@type": "Answer", "text": "A generous free tier will always exist. Pro plans with higher rate limits, custom templates, webhooks, and priority support are coming soon. Early users will receive special loyalty pricing." } },
+          ]
+        })}</script>
       </Helmet>
 
       <Header />

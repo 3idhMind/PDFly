@@ -36,12 +36,24 @@ const ImageToPdfFeature = () => {
         <link rel="canonical" href={`${SITE_URL}/image-to-pdf`} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "SoftwareApplication",
-          name: "PDFly Image to PDF",
-          applicationCategory: "UtilitiesApplication",
-          operatingSystem: "Web",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
-          description: "Convert 100+ images in 25+ formats to PDF. Supports HEIC, WebP, RAW, TIFF.",
+          "@graph": [
+            {
+              "@type": "SoftwareApplication",
+              name: "PDFly Image to PDF",
+              applicationCategory: "UtilitiesApplication",
+              operatingSystem: "Web",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+              description: "Convert 100+ images in 25+ formats to PDF. Supports HEIC, WebP, RAW, TIFF.",
+            },
+            {
+              "@type": "FAQPage",
+              "mainEntity": [
+                { "@type": "Question", "name": "Can I convert iPhone HEIC photos to PDF for free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. PDFly supports HEIC/HEIF format (iPhone photos) natively. Upload your HEIC files and they are automatically converted to PDF in your browser — no server upload, completely private." } },
+                { "@type": "Question", "name": "What image formats does PDFly support for PDF conversion?", "acceptedAnswer": { "@type": "Answer", "text": "PDFly supports 25+ formats: JPEG, PNG, WebP, HEIC/HEIF, GIF, BMP, TIFF, SVG, AVIF, PSD, ICO, and RAW camera formats (CR2, NEF, ARW, DNG, ORF, RW2, RAF, PEF, SR2, SRW)." } },
+                { "@type": "Question", "name": "How many images can I convert to one PDF at once?", "acceptedAnswer": { "@type": "Answer", "text": "PDFly's web UI supports 100+ images in a single PDF. All processing is done in your browser using Canvas API, so there are no server limits." } },
+              ]
+            }
+          ]
         })}</script>
       </Helmet>
       <Header />
