@@ -4,6 +4,6 @@
       "source": "/api/:fn*",
       "destination": "https://nlnqpcfezbssssrwddyl.supabase.co/functions/v1/:fn*"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(?!sitemap\\.xml|robots\\.txt|manifest\\.json|llms\\.txt)(.*)", "destination": "/index.html" }
   ]
 }

@@ -3,6 +3,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { Helmet } from "react-helmet-async";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1657,11 +1659,11 @@ const BlogPost = () => {
           {postMeta.image && (
             <img src={postMeta.image} alt={postMeta.title} className="w-full h-64 object-cover rounded-lg mb-8" loading="lazy" />
           )}
-          <Card className="p-8 glass">
-            <div className="prose prose-sm max-w-none">
-              {content.split("\n\n").map((p, i) => (
-                <p key={i} className="text-sm text-muted-foreground leading-relaxed mb-4">{p}</p>
-              ))}
+          <Card className="p-8 glass overflow-hidden">
+            <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none prose-headings:font-display prose-a:text-primary prose-img:rounded-xl">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {content}
+              </ReactMarkdown>
             </div>
           </Card>
         </article>
