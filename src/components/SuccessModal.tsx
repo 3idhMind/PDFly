@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
-import { formatBytes } from "@/lib/pdfGenerator";
+import { formatBytes } from "@/lib/utils";
 
 interface SuccessModalProps {
   isOpen: boolean;

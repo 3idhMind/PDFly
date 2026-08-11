@@ -231,7 +231,7 @@ const SplitPdf = () => {
                   <button
                     key={n}
                     onClick={() => togglePage(n)}
-                    className={`w-10 h-10 rounded-lg text-sm font-mono border transition-colors ${
+                    className={`w-11 h-11 sm:w-10 sm:h-10 rounded-lg text-sm font-mono border transition-colors ${
                       picked.has(n)
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border hover:border-primary/40 text-muted-foreground"
@@ -251,7 +251,7 @@ const SplitPdf = () => {
                 Each row becomes one PDF. Need pages 1–5, 6–10 and 11–20? Add three rows.
               </p>
               {rows.map((r, i) => (
-                <div key={r.id} className="flex items-center gap-2">
+                <div key={r.id} className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-mono text-muted-foreground w-10">File {i + 1}</span>
                   <Input
                     type="number"
@@ -260,7 +260,7 @@ const SplitPdf = () => {
                     value={r.from}
                     placeholder="from"
                     onChange={(e) => setRows((p) => p.map((x) => (x.id === r.id ? { ...x, from: e.target.value } : x)))}
-                    className="w-24"
+                    className="w-20 sm:w-24"
                     aria-label={`Range ${i + 1} start page`}
                   />
                   <span className="text-muted-foreground text-sm">to</span>
@@ -271,7 +271,7 @@ const SplitPdf = () => {
                     value={r.to}
                     placeholder="to"
                     onChange={(e) => setRows((p) => p.map((x) => (x.id === r.id ? { ...x, to: e.target.value } : x)))}
-                    className="w-24"
+                    className="w-20 sm:w-24"
                     aria-label={`Range ${i + 1} end page`}
                   />
                   <Button

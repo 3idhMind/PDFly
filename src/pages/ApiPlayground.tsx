@@ -8,10 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Play, ExternalLink, Loader2, KeyRound, Copy, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getIdToken } from "@/lib/firebase/auth";
+import { ApiMaintenanceNotice } from "@/components/ApiMaintenanceNotice";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE = "https://pdfly.3idhmind.in/api";
+// Same-origin. This used to be hardcoded to the production URL, which meant
+// running locally fired real requests at production — cross-origin, against
+// endpoints expecting a different token type, producing "cannot fetch API".
+// Relative keeps localhost on localhost and production on production.
+const API_BASE = "/api";
 
 type EndpointKey =
   | "generate-pdf"
@@ -138,8 +143,7 @@ const ApiPlayground = () => {
 
       let token = apiKey.trim();
       if (useSession && !token) {
-        const { data } = await supabase.auth.getSession();
-        token = data.session?.access_token || "";
+        token = (await getIdToken()) ?? "";
       }
       if (!token) {
         toast({
@@ -195,6 +199,8 @@ const ApiPlayground = () => {
             Sample PDFs are prefilled — hit <strong>Run</strong> to see the preview.
           </p>
         </div>
+
+        <ApiMaintenanceNotice className="mb-8" />
 
         <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
           {/* Sidebar */}

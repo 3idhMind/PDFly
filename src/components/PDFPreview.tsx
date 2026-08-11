@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Printer, FileText } from "lucide-react";
-import { formatBytes } from "@/lib/pdfGenerator";
+import { formatBytes } from "@/lib/utils";
 
 interface PDFPreviewProps {
   pdfs: Array<{ title: string; url: string; sizeBytes: number }>;

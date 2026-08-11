@@ -9,11 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { FileDown, Loader2, Minimize2, CloudCog, CheckCircle2, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatBytes as fmt } from "@/lib/utils";
 import type { PdfAnalysis } from "@/lib/pdfTools/analyzePdf";
 import type { CompressProgress, CompressResult, QualityFloor } from "@/lib/pdfTools/compress";
-
-const fmt = (b: number) =>
-  b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(2)} MB`;
 
 interface Outcome {
   before: number;
@@ -26,7 +24,19 @@ interface Outcome {
   usedCloud: boolean;
 }
 
-const CompressPdf = () => {
+interface Props {
+  /**
+   * Drives the KB-preset landing pages (/compress-pdf-to-200kb etc). When set,
+   * the target locks to this exact value instead of the "35% of original"
+   * auto-suggestion — the entire point of a page titled "to 200KB" is that it
+   * targets 200KB regardless of the file, not a size relative to the input.
+   * All preset pages share this one component and one lazy-loaded chunk; only
+   * the route and this prop differ. See src/lib/routeMeta.ts for the SEO copy.
+   */
+  presetKB?: number;
+}
+
+const CompressPdf = ({ presetKB }: Props = {}) => {
   const [files, setFiles] = useState<File[]>([]);
   const [analysis, setAnalysis] = useState<PdfAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -52,7 +62,8 @@ const CompressPdf = () => {
         const a = await analyzePdf(file);
         if (cancelled) return;
         setAnalysis(a);
-        const suggested = Math.max(a.floorBytes, Math.round(a.bytes * 0.35));
+        const preset = presetKB ? presetKB * 1024 : null;
+        const suggested = preset ?? Math.max(a.floorBytes, Math.round(a.bytes * 0.35));
         setTargetBytes(Math.min(suggested, a.bytes));
       } catch (e) {
         if (!cancelled) toast({ title: "Could not read that PDF", description: (e as Error).message, variant: "destructive" });
@@ -62,7 +73,7 @@ const CompressPdf = () => {
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [files]);
+  }, [files, presetKB]);
 
   const handleCompress = async () => {
     if (!files[0]) return;
@@ -85,6 +96,11 @@ const CompressPdf = () => {
           });
         },
         cloud: async () => {
+          // The server runs the lossless structural pass ONLY. The deep raster
+          // ladder needs a <canvas>, which the Deno runtime does not have, so
+          // `qualityFloor` is accepted and ignored server-side. Label the result
+          // for what actually ran — the UI below branches on usedCloud to
+          // explain why the target may not have been reached.
           const parts = await runInCloud("compress", [files[0]], {
             targetBytes,
             qualityFloor: quality,
@@ -93,7 +109,7 @@ const CompressPdf = () => {
             blob: parts[0].blob,
             originalBytes: before,
             outputBytes: parts[0].blob.size,
-            qualityUsed: "Lossless (cloud)",
+            qualityUsed: "Lossless",
             rasterized: false,
             targetMet: parts[0].blob.size <= targetBytes,
             pages: analysis?.pages ?? 0,
@@ -117,7 +133,15 @@ const CompressPdf = () => {
         usedCloud,
       });
       toast({
-        title: out.targetMet ? "Target reached" : "Compressed as far as possible",
+        title: out.targetMet
+          ? "Target reached"
+          : usedCloud
+            // Never say "as far as possible" about a run that skipped the deep
+            // pass entirely — that claims an exhaustive attempt that never
+            // happened, and sends the user off to tweak a setting that was
+            // ignored.
+            ? "Partly compressed on the cloud"
+            : "Compressed as far as possible",
         description: `${fmt(before)} → ${fmt(out.outputBytes)}${usedCloud ? " (secure cloud)" : ""}`,
       });
     } catch (e) {
@@ -145,15 +169,40 @@ const CompressPdf = () => {
             ? "Assembling your PDF…"
             : "";
 
+  // Preset pages get their own slug/title/tagline/FAQ so each is a genuinely
+  // distinct, prerendered, indexable page — not one page with a query param.
+  const presetKbLabel = presetKB ? `${presetKB}KB` : null;
+  const slug = presetKB ? `compress-pdf-to-${presetKB}kb` : "compress-pdf";
+  const title = presetKbLabel ? `Compress PDF to ${presetKbLabel}` : "Compress PDF";
+  const metaTitle = presetKbLabel
+    ? `Compress PDF to ${presetKbLabel} Free — Exact Size, In Your Browser | PDFly`
+    : "Compress PDF to a Target Size — Free, In Your Browser | PDFly";
+  const metaDescription = presetKbLabel
+    ? `Compress a PDF to exactly ${presetKbLabel} or under. Best quality that still fits the limit — needed for most exam and government portal uploads. 100% browser-based, no upload.`
+    : "Compress PDF to 10 MB, 5 MB, or any size you choose. Pick your target, we deliver the best quality that fits. 100% browser-based, no upload, no signup.";
+  const tagline = presetKbLabel
+    ? `Most portals cap uploads at ${presetKbLabel}. Drop your PDF and we compress it to fit — at the best quality that still meets the limit.`
+    : "Stuck on a 10 MB upload limit? Name the size you need — we hit it at the best quality that fits, right in your browser.";
+
   return (
     <PdfToolLayout
-      slug="compress-pdf"
-      title="Compress PDF"
-      metaTitle="Compress PDF to a Target Size — Free, In Your Browser | PDFly"
-      metaDescription="Compress PDF to 10 MB, 5 MB, or any size you choose. Pick your target, we deliver the best quality that fits. 100% browser-based, no upload, no signup."
-      tagline="Stuck on a 10 MB upload limit? Name the size you need — we hit it at the best quality that fits, right in your browser."
+      slug={slug}
+      title={title}
+      howToSteps={[
+        `Drop your PDF into the box below — it's read locally, never uploaded.`,
+        presetKbLabel
+          ? `The target is already set to ${presetKbLabel}. Adjust it or leave it as is.`
+          : `Set the size you need, using a preset or the slider.`,
+        `Click Compress. The tool tries the lossless pass first, then re-encodes pages only if needed to hit your target.`,
+        `Download the result — it's generated in your browser and never touches a server unless your device can't handle the file and you explicitly allow the cloud fallback.`,
+      ]}
+      metaTitle={metaTitle}
+      metaDescription={metaDescription}
+      tagline={tagline}
       faqs={[
-        { q: "How do I get a PDF under 10 MB?", a: "Drop the file, tap the 'Under 10 MB' preset, and hit compress. The tool searches quality settings and delivers the best-looking file that still fits under your target." },
+        presetKbLabel
+          ? { q: `How do I compress a PDF to ${presetKbLabel}?`, a: `Drop your file below — the target is already set to ${presetKbLabel}. Hit compress and the tool searches quality settings to find the best-looking result that still fits under the limit.` }
+          : { q: "How do I get a PDF under 10 MB?", a: "Drop the file, tap the 'Under 10 MB' preset, and hit compress. The tool searches quality settings and delivers the best-looking file that still fits under your target." },
         { q: "How much can I actually save?", a: "Scanned documents and photo-heavy PDFs typically shrink 80–95%. Text-based PDFs are already compact — expect 5–15%, because the content itself is the floor. The tool tells you which kind of file you have before you start." },
         { q: "Does compression lose quality?", a: "The first pass is fully lossless. Only if that doesn't reach your target do we re-encode page images — and we always stop at the highest quality that still fits, never lower." },
         { q: "Will text still be selectable?", a: "Yes on the lossless pass. When deep compression is needed, pages are re-encoded as images, so the text layer is replaced — we tell you clearly when that happens." },
@@ -217,6 +266,15 @@ const CompressPdf = () => {
               <p className="inline-flex items-start gap-2 text-foreground">
                 <CheckCircle2 className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                 Target met — and we stopped at the best quality that fits, not the smallest possible.
+              </p>
+            ) : result.usedCloud ? (
+              <p className="inline-flex items-start gap-2 text-foreground">
+                <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                This ran on our cloud, which only does the lossless pass — stripping metadata and
+                repacking the file. The deep pass that re-encodes pages to hit an exact size needs a
+                browser canvas, so it was never attempted here. Your quality setting had no effect on
+                this result. To reach {fmt(targetBytes)}, run it on a device with more free memory,
+                or split the document and compress each part.
               </p>
             ) : (
               <p className="inline-flex items-start gap-2 text-foreground">

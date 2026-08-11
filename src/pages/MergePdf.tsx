@@ -7,6 +7,7 @@ import { runInCloud, withCloudFallback } from "@/lib/cloudFallback";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowDown, FileDown, Loader2, Combine, CloudCog, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatBytes } from "@/lib/utils";
 
 const MergePdf = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -93,11 +94,11 @@ const MergePdf = () => {
               </span>
               <span className="flex-1 text-sm truncate">{f.name}</span>
               <span className="text-[11px] text-muted-foreground font-mono shrink-0">
-                {(f.size / 1024 / 1024).toFixed(1)} MB
+                {formatBytes(f.size)}
               </span>
-              <Button variant="ghost" size="sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up"><ArrowUp className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="sm" onClick={() => move(i, 1)} disabled={i === files.length - 1} aria-label="Move down"><ArrowDown className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="sm" onClick={() => setFiles(files.filter((_, x) => x !== i))} aria-label="Remove"><X className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up"><ArrowUp className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0" onClick={() => move(i, 1)} disabled={i === files.length - 1} aria-label="Move down"><ArrowDown className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="sm" className="h-11 w-11 sm:h-9 sm:w-9 p-0" onClick={() => setFiles(files.filter((_, x) => x !== i))} aria-label="Remove"><X className="w-4 h-4" /></Button>
             </div>
           ))}
         </div>

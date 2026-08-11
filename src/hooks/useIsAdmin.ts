@@ -1,44 +1,50 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
+/**
+ * Admin check, backed by a Firebase custom claim.
+ *
+ * The claim can only be set with the Admin SDK — a signed-in user cannot grant
+ * it to themselves, and it is carried inside the signed ID token, so the server
+ * re-verifies it on every request rather than trusting anything the client says.
+ * This replaces the Supabase version, which round-tripped to a `bootstrap-admin`
+ * edge function and then read a `user_roles` table on every auth change.
+ *
+ * This hook only decides whether to *render* admin UI. It is not a security
+ * boundary — every admin API route must verify the same claim server-side.
+ */
 export const useIsAdmin = () => {
+  const { user, loading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
-    const check = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        if (!cancelled) { setIsAdmin(false); setLoading(false); }
-        return;
-      }
+    if (authLoading) return;
+    if (!user) {
+      setIsAdmin(false);
+      setLoading(false);
+      return;
+    }
 
-      // Always ask the backend — it verifies the email against the ADMIN_EMAIL
-      // secret server-side. The frontend never knows the admin email.
-      try {
-        await supabase.functions.invoke("bootstrap-admin");
-      } catch (err) {
-        console.warn("bootstrap-admin invoke failed:", err);
-      }
-
-      const { data, error } = await supabase
-        .from("user_roles" as any)
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (!cancelled) {
-        setIsAdmin(!error && !!data);
+    user
+      .getIdTokenResult()
+      .then((token) => {
+        if (cancelled) return;
+        setIsAdmin(token.claims.admin === true);
         setLoading(false);
-      }
-    };
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsAdmin(false);
+        setLoading(false);
+      });
 
-    check();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => check());
-    return () => { cancelled = true; subscription.unsubscribe(); };
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, authLoading]);
 
   return { isAdmin, loading };
 };

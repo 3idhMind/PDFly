@@ -1,89 +1,69 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, ArrowRight, Mail, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Lock, Clock } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { SEOHead } from "@/components/SEOHead";
 import { SITE_URL } from "@/lib/config";
+import { signInWithGoogle, authErrorMessage } from "@/lib/firebase/auth";
 
-type AuthView = "login" | "signup" | "forgot";
+const GoogleMark = () => (
+  <svg viewBox="0 0 48 48" className="w-[18px] h-[18px]" aria-hidden="true">
+    <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.1z" />
+    <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.6-3.9-12.4-9.1H4.3v5.7C7.9 41.1 15.4 46 24 46z" />
+    <path fill="#FBBC05" d="M11.6 28.1c-.5-1.3-.7-2.7-.7-4.1s.3-2.8.7-4.1v-5.7H4.3C2.8 17.1 2 20.4 2 24s.8 6.9 2.3 9.8l7.3-5.7z" />
+    <path fill="#EA4335" d="M24 10.8c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C34.9 4.2 30 2 24 2 15.4 2 7.9 6.9 4.3 14.2l7.3 5.7c1.8-5.2 6.6-9.1 12.4-9.1z" />
+  </svg>
+);
 
+/**
+ * Google-only sign-in for now.
+ *
+ * Email/password is still fully wired on the backend — Firebase has the
+ * provider enabled and `signUpWithEmail`/`signInWithEmail` are untouched in
+ * lib/firebase/auth.ts. Only this UI hides it, and only because the password
+ * reset Action URL cannot be configured until the custom sender domain finishes
+ * verifying. Shipping a signup path whose recovery flow is half-configured
+ * means locking people out of their own accounts, which is worse than one
+ * fewer button.
+ *
+ * To restore: put the form back. No backend change required.
+ */
 const Auth = () => {
-  const [view, setView] = useState<AuthView>("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [displayName, setDisplayName] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // Preserve a same-origin `next` param so the OAuth consent flow returns here.
+
+  // Same-origin `next` only. The `//` check blocks protocol-relative URLs like
+  // //evil.com, which would otherwise be an open redirect.
   const rawNext = searchParams.get("next") ?? "";
   const safeNext = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (view === "signup" && !acceptedTerms) {
-      toast({ title: "Please accept the Terms & Privacy Policy to continue", variant: "destructive" });
-      return;
-    }
+  const handleGoogle = async () => {
     setLoading(true);
     try {
-      if (view === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        if (error) throw error;
-        toast({ title: "Check your email", description: "We sent you a password reset link" });
-        return;
-      }
-      if (view === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast({ title: "Welcome back!", description: "Logged in successfully" });
+      const user = await signInWithGoogle();
+      // null means we fell back to a redirect — the page is navigating away.
+      if (user) {
+        toast({ title: "Welcome!" });
         navigate(safeNext);
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}${safeNext}`,
-            data: { display_name: displayName || email },
-          },
-        });
-        if (error) throw error;
-        toast({ title: "Account created!", description: "Check your email to confirm your account" });
       }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
-      toast({ title: "Error", description: message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Sign-in failed", description: authErrorMessage(err), variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const title = view === "login" ? "Welcome back" : view === "signup" ? "Create your account" : "Reset your password";
-  const subtitle = view === "login"
-    ? "Sign in to manage your API keys and usage."
-    : view === "signup"
-    ? "Sign up to get your own API key. Free forever."
-    : "Enter your email — we'll send you a reset link.";
-
-  const cta = view === "login" ? "Sign In" : view === "signup" ? "Create Account" : "Send Reset Link";
-
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <SEOHead
-        title="Sign In or Sign Up — PDFly by 3idhMinds"
-        description="Sign in or create a free PDFly account to get API keys, manage rate limits, and access usage analytics for PDF generation."
+        title="Sign In — PDFly by 3idhMinds"
+        description="Sign in to PDFly to manage your API keys and usage. The web PDF tools are free and need no account at all."
         canonical={`${SITE_URL}/auth`}
       />
+
       {/* Left brand panel */}
       <div className="hidden md:flex relative bg-[#0D0D0D] text-white flex-col justify-between p-12 overflow-hidden">
         <div className="absolute inset-0 opacity-20 pointer-events-none" style={{
@@ -100,7 +80,7 @@ const Auth = () => {
             Your documents.<br/>Your privacy.<br/>Your API.
           </p>
           <p className="text-sm text-white/60 max-w-sm">
-            The only free PDF API where your files never leave your browser.
+            An account is only for API keys. Every PDF tool on the site works without one.
           </p>
         </div>
         <div className="relative z-10 flex items-center gap-2 text-xs text-white/40">
@@ -109,7 +89,7 @@ const Auth = () => {
         </div>
       </div>
 
-      {/* Right form panel */}
+      {/* Right panel */}
       <div className="flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 bg-background min-h-screen">
         <div className="max-w-md w-full mx-auto">
           <div className="md:hidden mb-8 flex flex-col leading-none">
@@ -120,110 +100,66 @@ const Auth = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => view === "forgot" ? setView("login") : navigate("/")}
+            onClick={() => navigate("/")}
             className="mb-6 -ml-2 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
 
-          {view !== "forgot" && (
-            <div className="inline-flex p-1 rounded-full bg-muted mb-6 w-full max-w-xs">
-              {(["login", "signup"] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setView(v)}
-                  className={`flex-1 h-9 rounded-full text-sm font-medium transition-colors ${
-                    view === v
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {v === "login" ? "Sign in" : "Create account"}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2 tracking-tight">{title}</h1>
-          <p className="text-muted-foreground text-sm mb-8">{subtitle}</p>
-
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {view === "signup" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Display Name</Label>
-                <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" className="h-12 rounded-full px-5 focus-visible:ring-primary" />
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required className="h-12 rounded-full px-5 focus-visible:ring-primary" />
-            </div>
-            {view !== "forgot" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Password</Label>
-                <div className="relative">
-                  <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="h-12 rounded-full px-5 pr-12 focus-visible:ring-primary" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((s) => !s)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {view === "signup" && (
-                  <p className="text-[11px] text-muted-foreground pl-5">At least 6 characters.</p>
-                )}
-              </div>
-            )}
-            {view === "signup" && (
-              <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer pt-1">
-                <Checkbox
-                  checked={acceptedTerms}
-                  onCheckedChange={(c) => setAcceptedTerms(c === true)}
-                  className="mt-0.5"
-                  required
-                />
-                <span>
-                  I agree to the{" "}
-                  <Link to="/terms" target="_blank" className="text-primary hover:underline">Terms of Service</Link>{" "}and{" "}
-                  <Link to="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</Link>.
-                </span>
-              </label>
-            )}
-            <Button
-              type="submit"
-              className="w-full h-12 rounded-full text-base font-medium btn-press bg-primary hover:bg-primary/90"
-              disabled={loading || (view === "signup" && !acceptedTerms)}
-            >
-              {loading ? "Loading..." : (
-                <span className="inline-flex items-center gap-2">
-                  {view === "forgot" ? <Mail className="w-4 h-4" /> : null}
-                  {cta}
-                  {view !== "forgot" && <ArrowRight className="w-4 h-4" />}
-                </span>
-              )}
-            </Button>
-          </form>
-
-          <p className="text-xs text-muted-foreground text-center mt-5">
-            No credit card. No subscription. No tricks.
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2 tracking-tight">
+            Sign in or sign up
+          </h1>
+          <p className="text-muted-foreground text-sm mb-8">
+            One button. Same account whether you're new or returning.
           </p>
 
-          <div className="mt-8 text-center space-y-2">
-            {view === "login" && (
-              <button onClick={() => setView("forgot")} className="block w-full text-sm text-muted-foreground hover:text-primary transition-colors">
-                Forgot your password?
-              </button>
-            )}
-            <button onClick={() => setView(view === "login" ? "signup" : "login")} className="text-sm text-foreground hover:text-primary transition-colors">
-              {view === "login" ? "Don't have an account? " : "Already have an account? "}
-              <span className="font-medium underline underline-offset-4">{view === "login" ? "Sign up" : "Sign in"}</span>
-            </button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleGoogle}
+            disabled={loading}
+            className="w-full h-12 rounded-full text-base font-medium gap-3 border-border hover:bg-muted/60"
+          >
+            <GoogleMark />
+            {loading ? "Opening Google…" : "Continue with Google"}
+          </Button>
+
+          {/* Email/password: temporarily hidden, honestly labelled. */}
+          <div className="mt-4 rounded-xl border border-dashed border-border bg-muted/30 p-4">
+            <div className="flex items-start gap-2.5">
+              <Clock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="text-xs">
+                <p className="font-medium text-foreground">Email and password — coming soon</p>
+                <p className="text-muted-foreground mt-0.5 leading-relaxed">
+                  Temporarily unavailable while we finish configuring password recovery.
+                  We'd rather not hand you an account you could get locked out of.
+                </p>
+              </div>
+            </div>
           </div>
+
+          <p className="text-xs text-muted-foreground text-center mt-6 leading-relaxed">
+            One account for every 3idhMinds tool.<br className="sm:hidden" />
+            {" "}Sign in once — whatever we build next, you're already in.
+          </p>
+
+          <div className="mt-8 pt-6 border-t border-border">
+            <p className="text-xs text-muted-foreground flex items-start gap-2">
+              <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary" />
+              <span>
+                You don't need an account to use PDFly. Merge, split, compress and convert all run
+                in your browser, for free, signed in or not — an account only exists so we can issue
+                you an API key.{" "}
+                <Link to="/" className="text-primary hover:underline">Back to the tools</Link>
+              </span>
+            </p>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground text-center mt-6">
+            By continuing you agree to our{" "}
+            <Link to="/terms" className="text-primary hover:underline">Terms</Link> and{" "}
+            <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+          </p>
         </div>
       </div>
     </div>

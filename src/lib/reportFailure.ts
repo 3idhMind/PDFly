@@ -1,8 +1,7 @@
-import { supabase } from "@/integrations/supabase/client";
-
 /**
- * Reports an application failure to the backend so it shows up on the admin
- * security dashboard. Never throws and never sends file contents.
+ * Reports an application failure to our own API. Never throws and never sends
+ * file contents. `keepalive` so a report survives the page being closed —
+ * which is exactly when the worst crashes happen.
  */
 export async function reportFailure(input: {
   message: string;
@@ -12,15 +11,18 @@ export async function reportFailure(input: {
   type?: string;
 }) {
   try {
-    await supabase.functions.invoke("report-issue", {
-      body: {
+    await fetch("/api/report-issue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
         message: input.message,
         tool: input.tool,
         stack: input.stack,
         severity: input.severity ?? "critical",
         type: input.type ?? "client_failure",
         route: typeof window !== "undefined" ? window.location.pathname : undefined,
-      },
+      }),
     });
   } catch {
     // Reporting must never break the app.

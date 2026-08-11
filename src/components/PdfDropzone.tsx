@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { UploadCloud, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatBytes } from "@/lib/utils";
 
 interface Props {
   multiple?: boolean;
@@ -58,11 +59,12 @@ export const PdfDropzone = ({ multiple = true, files, onFiles, accept = "applica
               <FileText className="w-4 h-4 text-primary shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{f.name}</p>
-                <p className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(1)} KB</p>
+                <p className="text-xs text-muted-foreground">{formatBytes(f.size)}</p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-11 w-11 sm:h-9 sm:w-9 p-0 shrink-0"
                 onClick={(e) => { e.stopPropagation(); onFiles(files.filter((_, idx) => idx !== i)); }}
                 aria-label="Remove"
               >

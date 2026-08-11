@@ -1,4 +1,8 @@
-import { jsPDF } from "jspdf";
+// jsPDF (~350KB) is imported dynamically inside convertImagesToPdf() so it
+// never lands in the main bundle. This file also exports plain constants and
+// helpers used by UI components — a static import here would pull jsPDF into
+// every page that renders an image picker. See _internal L-002.
+import type { jsPDF as JsPdfType } from "jspdf";
 
 export interface ImageFile {
   id: string;
@@ -94,19 +98,22 @@ function guessTypeFromExtension(filename: string): string {
   return map[ext || ""] || "image/unknown";
 }
 
-function isHeic(type: string, name: string): boolean {
+// Exported so lib/imageTools/resizeToTarget.ts can reuse HEIC handling and
+// image decoding rather than re-implementing it for the exam photo/signature
+// resizer — one HEIC path for the whole app, not two.
+export function isHeic(type: string, name: string): boolean {
   const t = type.toLowerCase();
   const n = name.toLowerCase();
   return t.includes("heic") || t.includes("heif") || n.endsWith(".heic") || n.endsWith(".heif");
 }
 
-async function convertHeicToJpeg(file: File): Promise<Blob> {
+export async function convertHeicToJpeg(file: File): Promise<Blob> {
   const heic2any = (await import("heic2any")).default;
   const result = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
   return Array.isArray(result) ? result[0] : result;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -116,7 +123,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function fileToDataUrl(file: File | Blob): Promise<string> {
+export async function fileToDataUrl(file: File | Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -172,7 +179,8 @@ export async function convertImagesToPdf(
   const contentH = pageH - margin * 2;
   const jpegQuality = QUALITY_MAP[options.quality];
 
-  const pdf = new jsPDF({
+  const { jsPDF } = await import("jspdf");
+  const pdf: JsPdfType = new jsPDF({
     orientation: isLandscape ? "landscape" : "portrait",
     unit: "mm",
     format: [pageW, pageH],

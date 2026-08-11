@@ -1,90 +1,78 @@
-# PDFly — Universal PDF Generator & REST API
+# PDFly by 3idhMinds
 
-> PDFly is a free universal PDF generation platform and REST API by 3idhMind. It allows developers to generate PDFs from HTML/Text in 70+ languages (including Hindi, Arabic RTL, Chinese, Japanese, Korean) with 15 professional templates, batch processing (up to 5 documents per call), and client-side image-to-PDF conversion for 25+ formats.
+> Free PDF and photo tools, browser-based. Compress a PDF or photo to an exact KB size (built for Indian exam/government portal uploads — SSC, UPSC, Aadhaar, PAN), merge, split, rotate, reorder, crop ID photos, convert images to/from PDF, and generate PDFs from text with 15 templates. Everything runs 100% client-side — files never leave the browser. A REST API exists for developers and renders Latin scripts only; Devanagari, Arabic and Chinese are supported in the browser tools via on-demand font loading.
 
-## Key Capabilities
+## Exam & portal upload requirements (primary-sourced)
 
-- **70+ Languages & Fonts:** Native support for Devanagari (Hindi, Marathi, Nepali), Arabic/Urdu/Persian (RTL), CJK (Chinese, Japanese, Korean), Cyrillic, Greek, Thai, Bengali, Tamil, Telugu, and Hinglish.
-- **HTML to PDF REST API:** Convert raw HTML with CSS styling to PDF via a single POST request.
-- **Client-Side Image to PDF:** Convert 100+ images (JPG, PNG, WebP, HEIC, RAW formats like CR2, NEF, DNG) directly in browser using Canvas API with zero server upload.
-- **Batch PDF Generation:** Process up to 5 documents in a single API request with parallel rendering.
-- **15 Built-in Templates:** Minimal, Professional, Creative, Modern, Classic, Elegant, Bold, Tech, Academic, Corporate, Artistic, Clean, Vibrant, Dark, Light.
+- [SSC CGL Signature Size 2026](/exam/ssc-signature-size): SSC CGL 2026's own notification gives two different signature dimensions (Section 9.6: 6.0×2.0cm; Annexure: 4.0×2.0cm) — both are stated here. CGL 2026 has no photo upload at all.
+- [UPSC Photo & Signature Size](/exam/upsc-photo-signature-size): Photo 20-200KB JPG, signature 20-100KB JPG at 350-500px, certificates 50-300KB PDF. These are minimums as well as maximums — UPSC rejects undersized files too, and validates the filename itself.
 
-## Documentation & API Endpoints
+## Exact-size tools
 
-- [Home Page](https://pdfly.3idhmind.in): Overview and live interactive PDF generator.
-- [API Documentation](https://pdfly.3idhmind.in/docs): Complete REST API guide, headers, payload formats, and code examples.
-- [Text to PDF](https://pdfly.3idhmind.in/text-to-pdf): Convert formatted text/HTML to PDF.
-- [Image to PDF](https://pdfly.3idhmind.in/image-to-pdf): Convert single or multiple images to PDF.
-- [Pricing](https://pdfly.3idhmind.in/pricing): Free tier details (no credit card required).
-- [Blog](https://pdfly.3idhmind.in/blog): Technical tutorials on PDF generation, AEO, Next.js integration, and multilingual rendering.
-- [Blog: wkhtmltopdf Migration Guide](https://pdfly.3idhmind.in/blog/wkhtmltopdf-deprecated-migration-guide-2026): Definitive guide to migrating from deprecated wkhtmltopdf to Puppeteer, Playwright, Gotenberg, or PDFly REST API.
-- [Blog: Invoice PDF at Scale](https://pdfly.3idhmind.in/blog/generate-invoice-pdf-nodejs-python-at-scale): Production-ready Node.js (BullMQ) and Python (Celery) invoice PDF generation with queue-based architecture.
-- [Blog: Puppeteer vs Playwright](https://pdfly.3idhmind.in/blog/puppeteer-vs-playwright-pdf-generation-2026): Benchmark comparison of Puppeteer vs Playwright for PDF generation, including cold starts, memory, ARM64, and serverless deployment.
+- [Compress PDF](/compress-pdf): Compress a PDF to any target size, with presets for 50KB/100KB/200KB/300KB/500KB and larger. Dedicated pages: [/compress-pdf-to-200kb](/compress-pdf-to-200kb), [/compress-pdf-to-100kb](/compress-pdf-to-100kb), [/compress-pdf-to-500kb](/compress-pdf-to-500kb), [/compress-pdf-to-300kb](/compress-pdf-to-300kb), [/compress-pdf-to-50kb](/compress-pdf-to-50kb).
+- [Resize Image to KB](/resize-image): Compress a photo or signature to an exact KB target via canvas quality search. Dedicated pages: [/compress-image-to-20kb](/compress-image-to-20kb), [/resize-signature-to-10kb](/resize-signature-to-10kb).
+- [ID Photo Crop](/id-photo-crop): Crop and resize a photo to Aadhaar/PAN/Voter ID PVC card dimensions at 600 DPI.
 
-## REST API Reference
+## Other browser tools
+
+- [PDF Generator App](/app): Generate PDFs from text using 15 templates.
+- [Text to PDF](/text-to-pdf): Feature page for text/HTML to PDF conversion.
+- [Image to PDF](/image-to-pdf): Feature page for converting images to PDF.
+- [Convert Images](/images-to-pdf): Combine 100+ images into a single PDF.
+- [Merge PDF](/merge-pdf): Combine multiple PDFs into one.
+- [Split PDF](/split-pdf): Extract page ranges into separate PDFs.
+- [Rotate PDF](/rotate-pdf): Rotate all or selected pages by 90/180/270 degrees.
+- [Delete PDF Pages](/delete-pdf-pages): Remove selected pages from a PDF.
+- [Reorder PDF Pages](/reorder-pdf-pages): Rearrange page order.
+- [PDF to Images](/pdf-to-images): Convert PDF pages to PNG/JPEG.
+
+## Other pages
+
+- [API Documentation](/docs): REST API reference, JavaScript SDK, code samples, authentication.
+- [Pricing](/pricing): Free tier details and upcoming Pro plans.
+- [Status](/status): Live system status for API and edge functions.
+- [Blog](/blog): Tutorials and guides on PDF generation.
+
+## REST API endpoints
 
 Base URL: `https://pdfly.3idhmind.in/api`
-Authentication Header: `Authorization: Bearer YOUR_API_KEY`
 
-### 1. Generate PDF
-- **Endpoint:** `POST /generate-pdf`
-- **Payload:**
-```json
-{
-  "documents": [
-    { "title": "Invoice #101", "content": "<h1>Invoice #101</h1><p>Amount: ₹5,000</p>" }
-  ],
-  "template": "professional",
-  "page_size": "A4",
-  "language": "auto"
-}
+- `POST /generate-pdf` — Text/HTML to PDF (up to 5 documents per call).
+- `POST /images-to-pdf` — Combine images into a PDF.
+- `POST /merge-pdf` — Merge multiple PDFs into one.
+- `POST /split-pdf` — Split a PDF by page ranges (e.g. `1-3,5,7-9`).
+- `POST /compress-pdf` — Rewrite a PDF with metadata stripped and object streams for smaller size.
+- `POST /pdf-to-images` — Return each page as a single-page PDF (for raster PNG/JPEG use the browser tool).
+- `GET /get-documents` — List or fetch generated documents.
+
+All endpoints require `Authorization: Bearer pdfgen_...` header. Generated files are auto-deleted within 1 hour.
+
+## JavaScript SDK
+
+```ts
+import { PDFly } from "@pdfly/sdk";
+const pdfly = new PDFly({ apiKey: "pdfgen_..." });
+await pdfly.mergePdf({ pdfs: [url1, url2] });
 ```
 
-### 2. Convert Images to PDF
-- **Endpoint:** `POST /images-to-pdf`
-- **Payload:**
-```json
-{
-  "images": ["data:image/jpeg;base64,..."],
-  "page_size": "A4",
-  "orientation": "portrait"
-}
-```
+## Blog
 
-## JavaScript / Node.js Quickstart
+- [Convert Images to PDF Free](/blog/convert-images-to-pdf-free): JPG, PNG, HEIC and 25+ formats.
+- [Top 10 Free PDF Tools for Developers 2026](/blog/top-10-free-pdf-tools-developers-2026)
+- [PDF Generation Pipeline with PDFly API](/blog/pdf-generation-pipeline-pdfly-api)
+- [PDFly vs Adobe vs Smallpdf](/blog/pdfly-vs-adobe-smallpdf-comparison)
+- [HTML to PDF API Guide](/blog/html-to-pdf-api-guide)
+- [Multi-language PDF Generation](/blog/multi-language-pdf-generation)
+- [Batch PDF Generation API](/blog/batch-pdf-generation-api)
+- [PDF Templates Guide](/blog/pdf-templates-guide)
+- [Free PDF API for Developers](/blog/free-pdf-api-developers)
+- [Invoice PDF Generation Tutorial](/blog/invoice-pdf-generation-tutorial)
+- [PDF API vs Puppeteer vs wkhtmltopdf](/blog/pdf-api-vs-puppeteer-wkhtmltopdf)
+- [PDF Generation for SaaS](/blog/pdf-generation-for-saas)
+- [RTL PDF Generation (Arabic, Hebrew)](/blog/rtl-pdf-generation-arabic-hebrew)
+- [Certificate PDF Generation in Bulk](/blog/certificate-pdf-generation-bulk)
 
-```javascript
-const response = await fetch('https://pdfly.3idhmind.in/api/generate-pdf', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_API_KEY'
-  },
-  body: JSON.stringify({
-    documents: [{ title: 'Document', content: '<h1>Hello World</h1>' }],
-    template: 'minimal',
-    page_size: 'A4',
-    language: 'auto'
-  })
-});
-const data = await response.json();
-console.log(data);
-```
+## Optional
 
-## Python Quickstart
-
-```python
-import requests
-
-response = requests.post(
-    'https://pdfly.3idhmind.in/api/generate-pdf',
-    headers={'Authorization': 'Bearer YOUR_API_KEY'},
-    json={
-        'documents': [{'title': 'Report', 'content': '<h1>Monthly Report</h1>'}],
-        'template': 'corporate',
-        'page_size': 'A4'
-    }
-)
-print(response.json())
-```
+- [Privacy Policy](/privacy)
+- [Terms of Service](/terms)

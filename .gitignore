@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets — never commit. Use .env.example as the tracked template.
+.env
+.env.*
+!.env.example
+
+# NOTE: _internal/ is deliberately NOT ignored.
+#
+# This repo (3idhMind/pdflyly) is PRIVATE, so internal docs are safe here and
+# get version history + off-machine backup for free. The PUBLIC repo is a
+# separate one (3idhMind/pdfly), synced manually — when syncing, do not copy
+# _internal/ across, and never push this repo's git history to it.
+# See _internal/DECISIONS.md D-008.

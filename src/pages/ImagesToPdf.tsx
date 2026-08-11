@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
@@ -157,17 +156,6 @@ const ImagesToPdf = () => {
         keywords="image to PDF, JPG to PDF, PNG to PDF, HEIC to PDF, convert images to PDF, batch image to PDF, free PDF converter"
         canonical={`${SITE_URL}/images-to-pdf`}
       />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          "mainEntity": [
-            { "@type": "Question", "name": "How do I convert HEIC iPhone photos to PDF?", "acceptedAnswer": { "@type": "Answer", "text": "Upload your HEIC files directly to PDFly's Images to PDF tool. It auto-converts HEIC/HEIF to PDF in your browser with no server upload — completely private." } },
-            { "@type": "Question", "name": "Can I convert 100 images to a single PDF?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. PDFly supports 100+ images in a single PDF. Drag to reorder, choose page size and orientation, and convert — all processing happens locally in your browser." } },
-            { "@type": "Question", "name": "What image formats are supported for PDF conversion?", "acceptedAnswer": { "@type": "Answer", "text": "JPG, PNG, WebP, HEIC, GIF, BMP, TIFF, SVG, AVIF, PSD, ICO, and all major RAW camera formats (CR2, NEF, ARW, DNG, ORF, RW2, RAF)." } }
-          ]
-        })}</script>
-      </Helmet>
       <Header />
 
       <main className="flex-1">

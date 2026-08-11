@@ -118,7 +118,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
         title="Text to PDF — Free Online Text to PDF Converter | PDFly"
-        description="Convert text to PDF free in your browser. 15 templates, 70+ languages, no upload, no watermark, no signup for basic use."
+        description="Convert text to PDF free in your browser. 15 templates, 11 page sizes, no upload, no watermark, no signup for basic use."
         canonical={`${SITE_URL}/app`}
 
       />
@@ -130,7 +130,7 @@ const Index = () => {
             <span className="gradient-text">Text to PDF</span>
           </h1>
           <p className="text-lg text-muted-foreground">
-            Turn plain text into a beautiful PDF — any language, 15 templates, right in your browser.
+            Turn plain text into a beautiful PDF — 15 templates, right in your browser. Nothing is uploaded.
           </p>
         </div>
 

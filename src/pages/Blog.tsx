@@ -22,70 +22,6 @@ export interface BlogPostMeta {
 
 export const blogPosts: BlogPostMeta[] = [
   {
-    slug: "wkhtmltopdf-deprecated-migration-guide-2026",
-    title: "wkhtmltopdf Is Dead: The 2026 Migration Guide to Modern PDF APIs",
-    excerpt: "wkhtmltopdf has been abandoned since 2023 with critical security vulnerabilities. This definitive guide covers every migration path — Puppeteer, Playwright, Gotenberg, DocRaptor, and lightweight REST APIs like PDFly — with side-by-side code examples.",
-    date: "2026-08-06", readTime: "16 min",
-    tags: ["wkhtmltopdf", "Migration", "Security", "2026"],
-    image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=400&fit=crop",
-  },
-  {
-    slug: "generate-invoice-pdf-nodejs-python-at-scale",
-    title: "Generate Invoice PDFs at Scale: Node.js & Python Tutorial with Full Code",
-    excerpt: "Complete production-ready guide to automated invoice PDF generation. Includes BullMQ queue architecture, Celery workers, HTML invoice templates, and real-world scaling patterns for SaaS billing systems.",
-    date: "2026-08-06", readTime: "18 min",
-    tags: ["Invoice", "Node.js", "Python", "Tutorial", "Scale"],
-    image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop",
-  },
-  {
-    slug: "puppeteer-vs-playwright-pdf-generation-2026",
-    title: "Puppeteer vs Playwright for PDF Generation: The Definitive 2026 Comparison",
-    excerpt: "Real benchmark data on cold starts, memory usage, ARM64 compatibility, and serverless deployment. When to use headless Chrome, when to switch to a lightweight API, and how to avoid the 200MB binary problem on Vercel.",
-    date: "2026-08-06", readTime: "15 min",
-    tags: ["Puppeteer", "Playwright", "Serverless", "Benchmark"],
-    image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&h=400&fit=crop",
-  },
-  {
-    slug: "aeo-ai-search-pdf-generation-2026",
-    title: "AEO & AI Search: How to Generate AI-Readable PDFs for Perplexity & ChatGPT",
-    excerpt: "Learn how Answer Engine Optimization (AEO) works for documents. Discover how to structure PDFs and REST APIs so AI crawlers like ChatGPT, Claude, and Perplexity accurately cite your brand.",
-    date: "2026-08-05", readTime: "11 min",
-    tags: ["AEO", "AI Search", "GEO", "2026"],
-    image: "https://images.unsplash.com/photo-1677442136019-21780efad99a?w=800&h=400&fit=crop",
-  },
-  {
-    slug: "nextjs-15-html-to-pdf-api-tutorial",
-    title: "Integrating HTML-to-PDF APIs in Next.js 15 & React Server Components",
-    excerpt: "Complete guide to generating PDFs in Next.js 15 App Router using Server Actions and PDFly REST API. Avoid heavy Puppeteer binaries on Vercel/Netlify.",
-    date: "2026-08-04", readTime: "13 min",
-    tags: ["Next.js 15", "React", "Tutorial", "API"],
-    image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=400&fit=crop",
-  },
-  {
-    slug: "devanagari-hindi-rtl-pdf-fix-nodejs",
-    title: "Solving Devanagari (Hindi) & RTL Text Corruption in PDF Generation",
-    excerpt: "Why do Hindi characters break or display as empty boxes (tofu) in PDFs? A technical deep dive into font embedding, HarfBuzz text shaping, and how PDFly solves it natively.",
-    date: "2026-08-03", readTime: "12 min",
-    tags: ["Hindi", "RTL", "Font Embedding", "Fix"],
-    image: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=800&h=400&fit=crop",
-  },
-  {
-    slug: "secure-pdf-generation-saas",
-    title: "Best Practices for Secure PDF Generation in SaaS Applications",
-    excerpt: "Learn how to generate secure PDFs, prevent XSS in HTML-to-PDF converters, protect user data, and implement proper access controls in your SaaS.",
-    date: "2026-08-05", readTime: "10 min",
-    tags: ["Security", "SaaS", "Best Practices"],
-    image: "https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=800&h=400&fit=crop",
-  },
-  {
-    slug: "pdf-generation-limits-canvas-vs-server",
-    title: "Understanding PDF Generation: Canvas API vs Server-side Rendering",
-    excerpt: "A deep dive into client-side Canvas API PDF generation versus server-side rendering. Learn the limits, performance differences, and when to use which approach.",
-    date: "2026-08-04", readTime: "12 min",
-    tags: ["Performance", "Architecture", "Deep Dive"],
-    image: "https://images.unsplash.com/photo-1550439062-609e1531270e?w=800&h=400&fit=crop",
-  },
-  {
     slug: "convert-images-to-pdf-free",
     title: "Convert Images to PDF Free — JPG, PNG, HEIC & 25+ Formats",
     excerpt: "Learn how to convert any image to PDF using PDFly. Supports 100+ images, 25+ formats including HEIC, WebP, RAW. Free, fast, client-side processing.",
@@ -112,7 +48,7 @@ export const blogPosts: BlogPostMeta[] = [
   {
     slug: "pdfly-vs-adobe-smallpdf-comparison",
     title: "PDFly vs Adobe Acrobat vs SmallPDF — Free PDF Converter Comparison",
-    excerpt: "Honest comparison of PDFly, Adobe Acrobat, and SmallPDF. Features, pricing, API access, language support, and developer experience compared.",
+    excerpt: "Honest comparison of PDFly, Adobe Acrobat, and SmallPDF. Features, pricing, API access, privacy, and developer experience compared.",
     date: "2026-03-19", readTime: "11 min",
     tags: ["Comparison", "Adobe", "SmallPDF"],
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop",
@@ -127,10 +63,10 @@ export const blogPosts: BlogPostMeta[] = [
   },
   {
     slug: "multi-language-pdf-generation",
-    title: "Generating PDFs in Hindi, Arabic & 70+ Languages — No Font Hassle",
-    excerpt: "Most PDF generators break with non-Latin scripts. PDFly natively supports 70+ languages including Hindi, Arabic, Chinese, Japanese, Korean, and Hinglish.",
+    title: "Hindi, Arabic & Chinese PDFs in the Browser — No Font Install",
+    excerpt: "Most PDF generators break on non-Latin scripts. The PDFly browser tool loads the right Noto font for Devanagari, Arabic and Simplified Chinese automatically. An honest look at what works and what doesn't yet.",
     date: "2026-03-07", readTime: "10 min",
-    tags: ["Multi-language", "Hindi", "Arabic", "RTL"],
+    tags: ["Scripts", "Hindi", "Arabic", "Fonts"],
     image: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=800&h=400&fit=crop",
   },
   {
@@ -160,7 +96,7 @@ export const blogPosts: BlogPostMeta[] = [
   {
     slug: "invoice-pdf-generation-tutorial",
     title: "How to Generate Invoices as PDFs Automatically — Complete Tutorial",
-    excerpt: "Automate invoice generation with PDFly. Create professional invoices in any language, with custom templates and batch processing for billing systems.",
+    excerpt: "Automate invoice generation with PDFly. Create professional invoices with custom templates and batch processing for billing systems.",
     date: "2026-03-03", readTime: "11 min",
     tags: ["Invoice", "Automation", "Tutorial"],
     image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop",
@@ -183,10 +119,10 @@ export const blogPosts: BlogPostMeta[] = [
   },
   {
     slug: "rtl-pdf-generation-arabic-hebrew",
-    title: "Right-to-Left PDF Generation: Arabic, Hebrew, Urdu & Persian Support",
-    excerpt: "How PDFly handles RTL languages perfectly. Automatic text direction, proper font selection, and mixed-direction content in a single PDF.",
+    title: "What Right-to-Left PDF Generation Actually Takes — And Where We Are",
+    excerpt: "Arabic and Urdu need more than flipped text: shaping, ligatures, and the bidi algorithm. Here's the real problem, and exactly how far PDFly gets today.",
     date: "2026-02-28", readTime: "8 min",
-    tags: ["RTL", "Arabic", "Hebrew", "Urdu"],
+    tags: ["RTL", "Arabic", "Urdu", "Fonts"],
     image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&h=400&fit=crop",
   },
   {
@@ -203,8 +139,8 @@ const Blog = () => {
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
         title="PDFly Blog — PDF Generation Guides, Tutorials & Tips | 3idhMind"
-        description="Learn about PDF generation, REST APIs, multi-language support, batch processing, and more. Free tutorials and guides by 3idhMind."
-        keywords="PDF generation blog, HTML to PDF tutorial, PDF API guide, multi-language PDF, invoice PDF, certificate PDF, 3idhMind blog"
+        description="Learn about PDF generation, REST APIs, non-Latin script rendering, batch processing, and more. Free tutorials and guides by 3idhMind."
+        keywords="PDF generation blog, HTML to PDF tutorial, PDF API guide, Hindi PDF, Arabic PDF, invoice PDF, certificate PDF, 3idhMind blog"
         canonical={`${SITE_URL}/blog`}
       />
       <Helmet>

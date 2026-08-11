@@ -1,34 +1,23 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
+import { ToolShowcase } from "@/components/ToolShowcase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { fs, getDb } from "@/lib/firebase/firestore";
 import { useState } from "react";
 import { SITE_URL } from "@/lib/config";
 import {
-  Code, Shield, Languages, ArrowRight, Star, Send, Lock, Globe, Palette, Check, Sparkles,
-  Combine, Scissors, Minimize2, Image as ImageIcon, FileText, Images,
+  Code, Shield, Languages, ArrowRight, Star, Send, Lock, Globe, Palette, Check,
 } from "lucide-react";
 
-const FREE_TOOLS = [
-  { href: "/merge-pdf",     icon: Combine,   label: "Merge PDF",     desc: "Combine multiple PDFs into one." },
-  { href: "/split-pdf",     icon: Scissors,  label: "Split PDF",     desc: "Extract pages or ranges." },
-  { href: "/compress-pdf",  icon: Minimize2, label: "Compress PDF",  desc: "Shrink files without losing quality." },
-  { href: "/pdf-to-images", icon: ImageIcon, label: "PDF to Images", desc: "Convert pages to PNG or JPG." },
-  { href: "/images-to-pdf", icon: Images,    label: "Images to PDF", desc: "Bundle photos into a PDF." },
-  { href: "/app",           icon: FileText,  label: "Text to PDF",   desc: "Beautiful PDFs from plain text." },
-];
-
 const TICKER = [
-  "70+ Languages", "25+ Image Formats", "15 Templates", "100% Free & Private",
-  "60 req/min API", "RTL Support", "Zero Upload", "Open Source",
+  "Zero Uploads", "25+ Image Formats", "15 Templates", "100% Free & Private",
+  "60 req/min API", "11 Page Sizes", "Zero Upload", "Open Source",
 ];
 
 const Landing = () => {
@@ -38,7 +27,6 @@ const Landing = () => {
   const [feedbackMsg, setFeedbackMsg] = useState("");
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [sending, setSending] = useState(false);
-  const [demoText, setDemoText] = useState("");
 
   const submitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,166 +35,98 @@ const Landing = () => {
       return;
     }
     setSending(true);
-    const { error } = await supabase.from("feedback").insert({
-      name: feedbackName.trim(),
-      email: feedbackEmail.trim(),
-      message: feedbackMsg.trim(),
-      rating: feedbackRating || null,
-    } as any);
-    setSending(false);
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const [{ addDoc, collection, serverTimestamp }, db] = await Promise.all([fs(), getDb()]);
+      await addDoc(collection(db, "feedback"), {
+        name: feedbackName.trim(),
+        email: feedbackEmail.trim(),
+        message: feedbackMsg.trim(),
+        rating: feedbackRating || null,
+        path: window.location.pathname,
+        createdAt: serverTimestamp(),
+      });
       toast({ title: "Thank you!", description: "Your feedback has been submitted." });
       setFeedbackName(""); setFeedbackEmail(""); setFeedbackMsg(""); setFeedbackRating(0);
+    } catch {
+      toast({
+        title: "Couldn't send that",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
-        title="PDFly — Free PDF API. Your files never leave your browser."
-        description="PDFly by 3idhMind: free, private PDF generator and REST API. Text & images to PDF in 70+ languages — 100% client-side. No upload, no tracking."
-        keywords="free PDF API, private PDF generator, text to PDF, image to PDF, client-side PDF, HTML to PDF, REST API PDF, PDFly, 3idhMind"
+        title="PDFly — Free PDF Tools. Files Never Leave Your Browser."
+        description="Merge, split, compress, resize and convert PDFs and photos free — 100% in your browser, nothing uploaded. Built for exam and government portal uploads. Free API for developers too."
+        keywords="free PDF tools, compress PDF, merge PDF, split PDF, resize photo to KB, PDF to image, client-side PDF, private PDF tools, PDFly"
         canonical={SITE_URL}
       />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "What is PDFly and what can it do?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "PDFly by 3idhMind is a free universal PDF generation platform and REST API. It converts HTML/text to PDF in 70+ languages including Hindi, Arabic RTL, Chinese, and Japanese, with 15 professional templates. It also converts 100+ images (JPG, PNG, HEIC, RAW) to PDF entirely in your browser — your files never leave your device."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Is PDFly really free? Are there any limits?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes, PDFly is 100% free. No credit card required. The REST API allows 60 requests per minute and up to 5 documents per batch request. All browser-based tools (merge, split, compress, image-to-PDF) are fully unlimited."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "How do I generate a PDF in Hindi, Arabic, or Chinese?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "PDFly natively supports 70+ languages. To generate a Hindi PDF, set `language: 'hi'` in the API request. For Arabic, use `language: 'ar'` and RTL layout is applied automatically. No font installation required."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Can I use PDFly without an account?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes. All browser tools (merge, split, compress, image-to-PDF, PDF-to-images) work without any account. The REST API requires a free account to generate an API key."
-              }
-            }
-          ]
-        })}</script>
-      </Helmet>
       <Header />
 
       {/* HERO ───────────────────────────────────────────── */}
+      {/*
+        Rewritten to lead with the tool, not the API. The V1 target is
+        someone arriving from Google mid-task (a rejected exam upload, a file
+        too big for a portal) — not a developer evaluating an API. See
+        _internal/PRD.md §1 and _internal/STRATEGY.md. The REST API still gets
+        a single line here (site does have one, worth knowing) and its own
+        full section further down the page — never the hero's main claim.
+      */}
       <section className="relative overflow-hidden">
-        {/* Animated soft gradient bg */}
         <div className="absolute inset-0 -z-10" style={{ background: "var(--gradient-hero)" }} />
         <div className="absolute inset-0 -z-10 animate-slow-pulse-bg" style={{
           background: "radial-gradient(ellipse at 30% 40%, hsl(175 80% 80% / 0.35), transparent 60%)",
         }} />
         <div className="absolute inset-0 -z-10 dot-pattern opacity-50" />
 
-        <div className="container mx-auto px-5 max-w-7xl pt-16 md:pt-24 pb-20 md:pb-28">
-          <div className="grid lg:grid-cols-5 gap-12 lg:gap-10 items-center">
+        <div className="container mx-auto px-5 max-w-7xl pt-14 md:pt-24 pb-16 md:pb-28">
+          <div className="grid lg:grid-cols-5 gap-10 lg:gap-10 items-center">
             {/* Left text — 60% (3/5) */}
-            <div className="lg:col-span-3 space-y-7">
+            <div className="lg:col-span-3 space-y-6 lg:space-y-7 text-center lg:text-left">
               <div className="animate-fade-up" style={{ animationDelay: "0ms" }}>
                 <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium text-primary border border-primary/40 bg-primary/5 pill-glow">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  100% Free — All Features Unlocked
+                  100% Free — Every Tool Unlocked
                 </span>
               </div>
 
-              <h1 className="animate-fade-up font-display font-bold tracking-tight text-[36px] sm:text-[48px] md:text-[56px] leading-[1.02]" style={{ animationDelay: "100ms" }}>
-                The only free PDF API where{" "}
-                <span className="font-serif-display italic text-primary font-normal">your files never leave your browser.</span>
+              <h1 className="animate-fade-up font-display font-bold tracking-tight text-[32px] sm:text-[42px] md:text-[56px] leading-[1.05]" style={{ animationDelay: "100ms" }}>
+                Every PDF tool you need,{" "}
+                <span className="font-serif-display italic text-primary font-normal">without uploading your file.</span>
               </h1>
 
-              <p className="animate-fade-up text-[17px] md:text-lg text-muted-foreground max-w-xl leading-relaxed" style={{ animationDelay: "200ms" }}>
-                Generate beautiful PDFs from text or images in 70+ languages. Zero uploads, zero tracking, zero limits — and a developer REST API that just works.
+              <p className="animate-fade-up text-[16px] md:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 leading-relaxed" style={{ animationDelay: "200ms" }}>
+                Compress a PDF to an exact size, resize a photo for an exam or portal upload, merge, split, convert — all inside your browser. Nothing ever leaves your device.
               </p>
 
-              <div className="animate-fade-up flex flex-col sm:flex-row gap-3" style={{ animationDelay: "300ms" }}>
+              <div className="animate-fade-up flex flex-col sm:flex-row gap-3 justify-center lg:justify-start" style={{ animationDelay: "300ms" }}>
                 <Button asChild size="lg" className="h-12 px-7 rounded-full text-base bg-primary hover:bg-primary/90 text-primary-foreground btn-press animate-pulse-glow">
-                  <Link to="/create">Start Generating — Free <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
+                  <Link to="/create">Use a Tool — Free <ArrowRight className="w-4 h-4 ml-1.5" /></Link>
                 </Button>
-                <Button asChild size="lg" variant="outline" className="h-12 px-6 rounded-full text-base border-foreground/20 hover:bg-foreground hover:text-background btn-press font-mono">
-                  <Link to="/docs">{"</>"} API Documentation</Link>
+                <Button asChild size="lg" variant="outline" className="h-12 px-6 rounded-full text-base border-foreground/20 hover:bg-foreground hover:text-background btn-press">
+                  <Link to="/exam/upsc-photo-signature-size">Exam Photo/Signature Size</Link>
                 </Button>
               </div>
 
-              <div className="animate-fade-up flex items-center gap-5 pt-2 text-xs text-muted-foreground" style={{ animationDelay: "400ms" }}>
+              <div className="animate-fade-up flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 pt-2 text-xs text-muted-foreground" style={{ animationDelay: "400ms" }}>
                 <span className="inline-flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Zero upload</span>
                 <span className="inline-flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> Open source</span>
                 <span className="inline-flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> No account needed</span>
+                <Link to="/docs" className="inline-flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Code className="w-3.5 h-3.5" /> Free REST API for developers
+                </Link>
               </div>
             </div>
 
-            {/* Right demo panel — 40% (2/5) */}
-            <motion.div
-              className="lg:col-span-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
-            >
-              <div className="relative rounded-2xl border border-border bg-card shadow-[0_20px_60px_-20px_rgba(0,0,0,0.18)] overflow-hidden">
-                {/* Window chrome */}
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40">
-                  <div className="flex gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#FF6B35]/70" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-primary/70" />
-                  </div>
-                  <span className="text-[10px] font-mono text-muted-foreground">pdfly.3idhmind.in · interactive demo</span>
-                </div>
-
-                <div className="grid grid-cols-2 min-h-[340px]">
-                  {/* Input */}
-                  <div className="p-4 border-r border-border bg-background/40">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Input</div>
-                    <textarea
-                      value={demoText}
-                      onChange={(e) => setDemoText(e.target.value)}
-                      placeholder="Type your content here..."
-                      className="w-full h-[280px] resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none leading-relaxed"
-                    />
-                  </div>
-
-                  {/* Preview */}
-                  <div className="p-4 bg-muted/20">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">PDF Preview</div>
-                    <div className="bg-white rounded-md shadow-sm border border-border h-[280px] p-4 overflow-hidden text-[10px] leading-relaxed text-black">
-                      <div className="border-b border-gray-200 pb-1.5 mb-2 flex items-center justify-between">
-                        <span className="font-display font-semibold text-[11px]">Document</span>
-                        <span className="text-[8px] text-gray-400 font-mono">PDFly · A4</span>
-                      </div>
-                      <div className="whitespace-pre-wrap font-serif">
-                        {demoText || (
-                          <span className="text-gray-400">
-                            Your beautifully formatted PDF will appear here as you type. Headers, paragraphs, lists — all rendered cleanly with proper typography and margins.
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            {/* Right — tool showcase, 40% (2/5) */}
+            <div className="lg:col-span-2">
+              <ToolShowcase />
+            </div>
           </div>
         </div>
       </section>
@@ -220,44 +140,6 @@ const Landing = () => {
                 {item}
                 <span className="ml-12 w-1.5 h-1.5 rounded-full bg-primary" />
               </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FREE TOOLS ─────────────────────────────────────── */}
-      <section className="py-20 border-t border-border">
-        <div className="container mx-auto px-5 max-w-7xl">
-          <div className="mb-10 flex items-end justify-between flex-wrap gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 text-xs font-mono text-primary mb-2 uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" /> Free tools
-              </div>
-              <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">
-                Every PDF tool.{" "}
-                <span className="font-serif-display italic font-normal text-muted-foreground">One local browser.</span>
-              </h2>
-            </div>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              All tools run 100% in your browser. No upload. No signup. No watermark. No limits.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {FREE_TOOLS.map((t) => (
-              <Link
-                key={t.href}
-                to={t.href}
-                className="group p-5 rounded-2xl border border-border bg-card hover:border-primary/40 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.12)] transition-all"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <t.icon className="w-5 h-5" />
-                </div>
-                <h3 className="font-display font-bold text-lg mb-1">{t.label}</h3>
-                <p className="text-sm text-muted-foreground leading-snug">{t.desc}</p>
-                <span className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                  Open <ArrowRight className="w-3 h-3" />
-                </span>
-              </Link>
             ))}
           </div>
         </div>
@@ -295,16 +177,16 @@ const Landing = () => {
               </div>
             </Card>
 
-            {/* 2 — 70+ Languages */}
+            {/* 2 — Scripts */}
             <Card className="p-7 premium-card rounded-2xl border-border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.06)] overflow-hidden relative">
               <div className="inline-flex items-center gap-2 text-xs font-mono text-primary mb-3 uppercase tracking-wider">
-                <Languages className="w-3.5 h-3.5" /> 02 · Languages
+                <Languages className="w-3.5 h-3.5" /> 02 · Scripts
               </div>
-              <h3 className="font-display text-2xl font-bold mb-2">70+ Languages</h3>
-              <p className="text-muted-foreground text-sm mb-3">Including full RTL.</p>
+              <h3 className="font-display text-2xl font-bold mb-2">Nothing Is Uploaded</h3>
+              <p className="text-muted-foreground text-sm mb-3">Every web tool runs in your tab. Works offline once loaded.</p>
               <div className="h-24 overflow-hidden relative">
                 <div className="flex flex-col gap-1 animate-marquee" style={{ animation: "float 6s linear infinite" }}>
-                  {["हिन्दी", "العربية", "中文", "日本語", "Español", "Français", "Português", "한국어", "Deutsch", "Русский"].map(l => (
+                  {["Merge", "Split", "Compress", "PDF → Images", "Images → PDF", "Text → PDF", "No signup", "No watermark"].map(l => (
                     <span key={l} className="text-sm text-foreground/70">{l}</span>
                   ))}
                 </div>
@@ -318,7 +200,7 @@ const Landing = () => {
                 <Code className="w-3.5 h-3.5" /> 03 · REST API
               </div>
               <h3 className="font-display text-2xl font-bold mb-3">One curl away.</h3>
-              <p className="text-white/60 text-sm mb-5">Drop-in REST endpoint. JSON in, PDF out.</p>
+              <p className="text-white/60 text-sm mb-5">Drop-in REST endpoint. JSON in, PDF out. The API renders Latin scripts today.</p>
               <pre className="font-mono text-[11px] leading-relaxed text-white/90 bg-white/5 rounded-lg p-4 border border-white/10 overflow-x-auto">
 {`curl -X POST \\
   https://pdfly.3idhmind.in/api/generate-pdf \\

@@ -9,28 +9,28 @@ import { SITE_URL } from "@/lib/config";
 const TermsOfService = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead title="Terms of Service — PDFly by 3idhMind" description="PDFly terms of service. Usage guidelines, API terms, and service conditions." keywords="PDFly terms, PDF generator terms of service, 3idhMind terms" canonical={`${SITE_URL}/terms`} />
+      <SEOHead title="Terms of Service — PDFly by 3idhMinds" description="PDFly terms of service. Usage guidelines, API terms, and service conditions." keywords="PDFly terms, PDF generator terms of service, 3idhMinds terms" canonical={`${SITE_URL}/terms`} />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-4xl flex-1">
         <div className="mb-8">
           <h1 className="text-3xl font-bold font-display text-foreground mb-2 flex items-center gap-2">
             <Scale className="w-7 h-7 text-primary" /> Terms of Service
           </h1>
-          <p className="text-sm text-muted-foreground">Last updated: March 8, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: August 10, 2026</p>
         </div>
 
         <Card className="p-8 space-y-6 glass">
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">1. Service Description</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              PDF Generator provides a web-based and API-driven platform for converting text and HTML content into PDF documents. The service includes a web interface for manual PDF generation and a REST API for programmatic access.
+              PDFly provides a web-based PDF toolkit — merge, split, compress, resize images, ID photo crop, rotate, delete/reorder pages, images-to-PDF, PDF-to-images, and text/HTML-to-PDF — plus a REST API for programmatic access. The web tools run entirely in your browser and need no account; the REST API is for developers who want programmatic access.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">2. Account Registration</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              You must create an account to access API features. You are responsible for maintaining the confidentiality of your account credentials and API keys. You must provide accurate and complete information during registration.
+              You must sign in to access API features; sign-in is currently via Google only. Your account (via "idhtools", the identity system shared across 3idhMinds products) works across every 3idhMinds product, not just PDFly. You are responsible for maintaining the confidentiality of your account and API keys.
             </p>
           </section>
 
@@ -48,7 +48,7 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">4. API Usage & Rate Limits</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              API access is governed by rate limits (default: 60 requests per minute per API key). Each request may contain up to 10 documents, with a maximum content size of 500KB per document and a title limit of 200 characters. We reserve the right to adjust rate limits to ensure fair usage.
+              API access is governed by rate limits (default: 60 requests per minute per API key). The PDF generation endpoint accepts up to 5 documents per request, with a maximum content size of 500,000 characters per document and a title limit of 200 characters. We reserve the right to adjust rate limits to ensure fair usage.
             </p>
           </section>
 

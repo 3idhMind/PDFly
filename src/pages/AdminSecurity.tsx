@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { getIdToken } from "@/lib/firebase/auth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,17 +49,21 @@ export default function AdminSecurity() {
   const load = useCallback(async () => {
     setDataLoading(true);
     setLoadError(null);
-    const [ev, lg] = await Promise.all([
-      supabase.from("security_events" as any).select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("api_request_logs" as any).select("*").order("created_at", { ascending: false }).limit(200),
-    ]);
-    if (ev.error || lg.error) {
-      setLoadError(ev.error?.message || lg.error?.message || "Failed to load data");
+    try {
+      const token = await getIdToken();
+      const res = await fetch("/api/admin-events", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.message ?? `Failed to load (${res.status})`);
+      setEvents(body.events ?? []);
+      setLogs(body.logs ?? []);
+    } catch (err) {
+      setLoadError((err as Error).message || "Failed to load data");
+    } finally {
+      setLastRefresh(new Date());
+      setDataLoading(false);
     }
-    setEvents((ev.data as any) ?? []);
-    setLogs((lg.data as any) ?? []);
-    setLastRefresh(new Date());
-    setDataLoading(false);
   }, []);
 
   useEffect(() => {

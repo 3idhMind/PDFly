@@ -1,186 +1,140 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
-import { Key, Plus, Trash2, Copy, EyeOff, Activity, BarChart3, FileText, Download } from "lucide-react";
+import { Key, Plus, Copy, Trash2, Activity, BarChart3, FileText, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/Footer";
-import type { User } from "@supabase/supabase-js";
 import { SEOHead } from "@/components/SEOHead";
 import { SITE_URL } from "@/lib/config";
+import { formatBytes } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { ApiMaintenanceNotice } from "@/components/ApiMaintenanceNotice";
+import { PRODUCT_ID } from "@/lib/firebase/client";
+import { fs, getDb } from "@/lib/firebase/firestore";
+import { api, ApiError, type ApiKeySummary, type CreatedApiKey } from "@/lib/api";
 
-interface ApiKey {
-  id: string;
-  key_prefix: string;
-  name: string;
-  is_active: boolean;
-  rate_limit_per_min: number;
-  created_at: string;
-  last_used_at: string | null;
+/** Mirrors PDFLY_FREE_TIER_MONTHLY_QUOTA on the server. */
+const FREE_TIER_MONTHLY_QUOTA = 100;
+
+interface MonthUsage {
+  pdfsGenerated: number;
+  apiCalls: number;
+  bytesProcessed: number;
 }
 
-interface UsageStats {
-  totalRequests: number;
-  successCount: number;
-  failCount: number;
-  totalDocuments: number;
-  totalBytes: number;
-  avgProcessingMs: number;
-}
-
-interface RecentDoc {
-  id: string;
-  title: string;
-  template: string | null;
-  language: string | null;
-  page_size: string | null;
-  size_bytes: number;
-  storage_path: string | null;
-  created_at: string;
-}
+const currentMonthId = () => new Date().toISOString().slice(0, 7); // "2026-08"
 
 const Settings = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const [apiKeys, setApiKeys] = useState<ApiKeySummary[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
-  const [newKeyRevealed, setNewKeyRevealed] = useState<string | null>(null);
-  const [usageStats, setUsageStats] = useState<UsageStats>({ totalRequests: 0, successCount: 0, failCount: 0, totalDocuments: 0, totalBytes: 0, avgProcessingMs: 0 });
-  const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
+  const [created, setCreated] = useState<CreatedApiKey | null>(null);
+  const [usage, setUsage] = useState<MonthUsage>({ pdfsGenerated: 0, apiCalls: 0, bytesProcessed: 0 });
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) navigate("/auth");
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) navigate("/auth");
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (!authLoading && !user) navigate("/auth?next=/settings");
+  }, [user, authLoading, navigate]);
 
-  useEffect(() => {
-    if (user) {
-      loadApiKeys();
-      loadUsageStats();
-      loadRecentDocs();
+  const loadKeys = useCallback(async () => {
+    try {
+      const { keys } = await api.listKeys();
+      setApiKeys(keys);
+    } catch (err) {
+      toast({
+        title: "Couldn't load API keys",
+        description: err instanceof ApiError ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  const loadUsage = useCallback(async () => {
+    if (!user) return;
+    try {
+      // One document per calendar month — a missing document simply means zero
+      // used, which is why there is no monthly reset job to go wrong.
+      const [{ doc, getDoc }, db] = await Promise.all([fs(), getDb()]);
+      const snap = await getDoc(
+        doc(db, "users", user.uid, "products", PRODUCT_ID, "usage", currentMonthId()),
+      );
+      if (snap.exists()) {
+        const d = snap.data();
+        setUsage({
+          pdfsGenerated: d.pdfsGenerated ?? 0,
+          apiCalls: d.apiCalls ?? 0,
+          bytesProcessed: d.bytesProcessed ?? 0,
+        });
+      }
+    } catch {
+      /* Usage is informational — never block the page on it. */
     }
   }, [user]);
 
-  const loadApiKeys = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from("api_keys").select("id, key_prefix, name, is_active, rate_limit_per_min, created_at, last_used_at").order("created_at", { ascending: false });
-    if (!error && data) setApiKeys(data);
-    setLoading(false);
+  useEffect(() => {
+    if (user) {
+      void loadKeys();
+      void loadUsage();
+    }
+  }, [user, loadKeys, loadUsage]);
+
+  const handleCreate = async () => {
+    const name = newKeyName.trim();
+    if (!name) {
+      toast({ title: "Name required", description: "Give the key a name so you can tell them apart.", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    try {
+      const result = await api.createKey(name);
+      setCreated(result);
+      setNewKeyName("");
+      await loadKeys();
+      toast({ title: "API key created", description: "Copy it now — it can't be shown again." });
+    } catch (err) {
+      toast({
+        title: "Couldn't create key",
+        description: err instanceof ApiError ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const loadUsageStats = async () => {
-    const { data, error } = await supabase.from("api_usage").select("status, document_count, bytes_processed, processing_time_ms");
-    if (!error && data) {
-      const total = data.length;
-      const success = data.filter(r => r.status === "success").length;
-      setUsageStats({
-        totalRequests: total,
-        successCount: success,
-        failCount: total - success,
-        totalDocuments: data.reduce((s, r) => s + r.document_count, 0),
-        totalBytes: data.reduce((s, r) => s + Number(r.bytes_processed || 0), 0),
-        avgProcessingMs: total > 0 ? Math.round(data.reduce((s, r) => s + r.processing_time_ms, 0) / total) : 0,
+  const handleRevoke = async (key: ApiKeySummary) => {
+    if (!window.confirm(`Revoke "${key.name}"? Any app using it stops working immediately, and this cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.revokeKey(key.keyId);
+      await loadKeys();
+      toast({ title: "Key revoked", description: "It will no longer authenticate any request." });
+    } catch (err) {
+      toast({
+        title: "Couldn't revoke key",
+        description: err instanceof ApiError ? err.message : "Please try again.",
+        variant: "destructive",
       });
     }
   };
 
-  const loadRecentDocs = async () => {
-    // Only show docs within the 30-minute retention window
-    const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const { data } = await supabase
-      .from("generated_documents")
-      .select("id, title, template, language, page_size, size_bytes, storage_path, created_at")
-      .gte("created_at", cutoff)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (data) setRecentDocs(data as RecentDoc[]);
+  const copy = (value: string) => {
+    void navigator.clipboard.writeText(value);
+    toast({ title: "Copied" });
   };
 
-  const generateApiKey = async () => {
-    if (!user || !newKeyName.trim()) {
-      toast({ title: "Name required", description: "Please enter a name for your API key", variant: "destructive" });
-      return;
-    }
+  if (authLoading || !user) return null;
 
-    const rawKey = `pdfgen_${crypto.randomUUID().replace(/-/g, "")}`;
-    const prefix = rawKey.slice(0, 12);
-    const encoder = new TextEncoder();
-    const data = encoder.encode(rawKey);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const keyHash = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-
-    const { error } = await supabase.from("api_keys").insert({
-      user_id: user.id,
-      key_hash: keyHash,
-      key_prefix: prefix,
-      name: newKeyName.trim(),
-    });
-
-    if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    setNewKeyRevealed(rawKey);
-    setNewKeyName("");
-    loadApiKeys();
-    toast({ title: "API Key Created", description: "Copy it now — it won't be shown again!" });
-  };
-
-  const revokeKey = async (id: string) => {
-    await supabase.from("api_keys").update({ is_active: false }).eq("id", id);
-    loadApiKeys();
-    toast({ title: "Key Revoked" });
-  };
-
-  const deleteKey = async (id: string) => {
-    await supabase.from("api_keys").delete().eq("id", id);
-    loadApiKeys();
-    toast({ title: "Key Deleted" });
-  };
-
-  const copyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    toast({ title: "Copied!" });
-  };
-
-  const formatBytes = (b: number) => {
-    if (b === 0) return "0 B";
-    const k = 1024;
-    const s = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(b) / Math.log(k));
-    return `${(b / Math.pow(k, i)).toFixed(1)} ${s[i]}`;
-  };
-
-  const downloadDoc = async (doc: RecentDoc) => {
-    if (!doc.storage_path) {
-      toast({ title: "No file", description: "This document has no downloadable PDF (generated before storage was enabled)", variant: "destructive" });
-      return;
-    }
-    const { data, error } = await supabase.storage
-      .from("generated-pdfs")
-      .createSignedUrl(doc.storage_path, 1800);
-    if (error || !data?.signedUrl) {
-      toast({ title: "Error", description: "Failed to generate download URL (file may have expired)", variant: "destructive" });
-      return;
-    }
-    window.open(data.signedUrl, "_blank");
-  };
-
-  if (!user) return null;
+  const quotaPct = Math.min(100, Math.round((usage.pdfsGenerated / FREE_TIER_MONTHLY_QUOTA) * 100));
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-secondary/20">
@@ -191,139 +145,144 @@ const Settings = () => {
       />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-3xl font-bold text-foreground mb-8">Settings & API Management</h1>
+        <h1 className="font-display text-3xl font-bold text-foreground mb-6">Settings &amp; API Management</h1>
 
-        {/* Usage Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-          {[
-            { label: "Total Requests", value: usageStats.totalRequests, icon: Activity },
-            { label: "Successful", value: usageStats.successCount, icon: BarChart3 },
-            { label: "Failed", value: usageStats.failCount, icon: BarChart3 },
-            { label: "Documents", value: usageStats.totalDocuments, icon: BarChart3 },
-            { label: "Data Processed", value: formatBytes(usageStats.totalBytes), icon: BarChart3 },
-            { label: "Avg Time", value: `${usageStats.avgProcessingMs}ms`, icon: Activity },
-          ].map((stat, i) => (
-            <Card key={i} className="p-4 text-center">
-              <stat.icon className="w-5 h-5 text-primary mx-auto mb-1" />
-              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              <div className="text-xs text-muted-foreground">{stat.label}</div>
-            </Card>
-          ))}
-        </div>
+        <ApiMaintenanceNotice className="mb-6" />
 
-        {/* Generate New Key */}
+        {/* This month's usage */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" /> This month
+            </h2>
+            <span className="text-xs text-muted-foreground font-mono">{currentMonthId()}</span>
+          </div>
+
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-3xl font-bold text-foreground">{usage.pdfsGenerated}</span>
+            <span className="text-muted-foreground">/ {FREE_TIER_MONTHLY_QUOTA} PDFs</span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${quotaPct >= 90 ? "bg-destructive" : "bg-primary"}`}
+              style={{ width: `${quotaPct}%` }}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-5">
+            {[
+              { label: "API calls", value: usage.apiCalls, icon: BarChart3 },
+              { label: "Data processed", value: formatBytes(usage.bytesProcessed), icon: BarChart3 },
+              { label: "Resets", value: "1st of month", icon: Activity },
+            ].map((s, i) => (
+              <div key={i} className="text-center">
+                <s.icon className="w-4 h-4 text-primary mx-auto mb-1" />
+                <div className="text-lg font-semibold text-foreground">{s.value}</div>
+                <div className="text-xs text-muted-foreground">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            Only PDFs generated through the REST API count towards this. Anything you make in the
+            browser is processed on your own device and isn't metered at all.
+          </p>
+        </Card>
+
+        {/* Create a key */}
         <Card className="p-6 mb-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Key className="w-5 h-5 text-primary" /> Generate New API Key
+            <Key className="w-5 h-5 text-primary" /> Create an API key
           </h2>
           <div className="flex gap-3">
-            <Input value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} placeholder="Key name (e.g. My Website)" className="flex-1" />
-            <Button onClick={generateApiKey}>
-              <Plus className="w-4 h-4 mr-1" /> Generate
+            <Input
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void handleCreate(); }}
+              placeholder="Key name (e.g. My Website)"
+              maxLength={60}
+              className="flex-1"
+            />
+            <Button onClick={handleCreate} disabled={creating}>
+              <Plus className="w-4 h-4 mr-1" /> {creating ? "Creating…" : "Create"}
             </Button>
           </div>
 
-          {newKeyRevealed && (
+          {created && (
             <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-              <p className="text-sm font-medium text-foreground mb-2">⚠️ Copy this key now — it won't be shown again!</p>
+              <p className="text-sm font-medium text-foreground mb-1">
+                Copy this key now — it won't be shown again.
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                We only store a SHA-256 hash of it, so we genuinely cannot show it to you later —
+                not even if you ask.
+              </p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs bg-muted p-2 rounded break-all">{newKeyRevealed}</code>
-                <Button size="sm" variant="outline" onClick={() => copyKey(newKeyRevealed)}>
+                <code className="flex-1 text-xs bg-muted p-2.5 rounded break-all font-mono">{created.key}</code>
+                <Button size="sm" variant="outline" onClick={() => copy(created.key)}>
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
-              <Button size="sm" variant="ghost" className="mt-2" onClick={() => setNewKeyRevealed(null)}>Dismiss</Button>
+              <Button size="sm" variant="ghost" className="mt-2" onClick={() => setCreated(null)}>
+                I've saved it
+              </Button>
             </div>
           )}
         </Card>
 
-        {/* API Keys List */}
+        {/* Key list */}
         <Card className="p-6 mb-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Your API Keys</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Your API keys</h2>
           {loading ? (
-            <p className="text-muted-foreground">Loading...</p>
+            <p className="text-muted-foreground text-sm">Loading…</p>
           ) : apiKeys.length === 0 ? (
-            <p className="text-muted-foreground">No API keys yet. Generate one above.</p>
+            <p className="text-muted-foreground text-sm">No API keys yet. Create one above.</p>
           ) : (
             <div className="space-y-3">
               {apiKeys.map((key) => (
-                <div key={key.id} className={`flex items-center justify-between p-4 rounded-lg border ${key.is_active ? "bg-card" : "bg-muted/50 opacity-60"}`}>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{key.name}</span>
-                      {!key.is_active && <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">Revoked</span>}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      <code>{key.key_prefix}••••••••</code> · Created {new Date(key.created_at).toLocaleDateString()}
-                      {key.last_used_at && ` · Last used ${new Date(key.last_used_at).toLocaleDateString()}`}
+                <div key={key.keyId} className="flex items-center justify-between p-4 rounded-lg border bg-card gap-3">
+                  <div className="min-w-0">
+                    <span className="font-medium text-foreground">{key.name}</span>
+                    <div className="text-xs text-muted-foreground mt-1 truncate">
+                      <code className="font-mono">{key.keyPrefix}••••••••</code>
+                      {key.createdAt && ` · Created ${new Date(key.createdAt).toLocaleDateString()}`}
+                      {key.lastUsedAt
+                        ? ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`
+                        : " · Never used"}
+                      {` · ${key.rateLimitPerMin}/min`}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    {key.is_active && (
-                      <Button size="sm" variant="outline" onClick={() => revokeKey(key.id)}>
-                        <EyeOff className="w-3 h-3 mr-1" /> Revoke
-                      </Button>
-                    )}
-                    <Button size="sm" variant="ghost" onClick={() => deleteKey(key.id)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleRevoke(key)}
+                    className="text-destructive hover:text-destructive shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Revoke
+                  </Button>
                 </div>
               ))}
             </div>
           )}
+          <p className="text-xs text-muted-foreground mt-4 flex items-start gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary" />
+            Revoking is immediate and permanent. Because only the hash is stored, a revoked key can
+            never be recovered — by you or by us.
+          </p>
         </Card>
 
-        {/* Recent Documents */}
+        {/* Recent documents */}
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" /> Recent Documents
-            </h2>
-            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
-              30-min retention
-            </span>
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+            <FileText className="w-5 h-5 text-primary" /> Recent documents
+          </h2>
+          <div className="text-center py-10 border border-dashed border-border rounded-lg">
+            <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+            <p className="text-muted-foreground text-sm">No API-generated documents.</p>
+            <p className="text-xs text-muted-foreground/70 mt-1 max-w-md mx-auto">
+              Only PDFs made through the REST API ever appear here. Anything you generate in the
+              browser stays on your device and is never uploaded.
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground mb-4">
-            Only PDFs generated via the <strong>REST API</strong> appear here. Web UI generations are 100% client-side and are never uploaded or stored on our servers. Documents shown below are auto-deleted from our database after 30 minutes — we cannot restore anything.
-          </p>
-          {recentDocs.length === 0 ? (
-            <div className="text-center py-10 border border-dashed border-border rounded-lg">
-              <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-              <p className="text-muted-foreground text-sm">No active API-generated documents.</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">Web UI generations stay private on your device and won't appear here.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {recentDocs.map((doc) => {
-                const ageMs = Date.now() - new Date(doc.created_at).getTime();
-                const minsLeft = Math.max(0, Math.ceil((30 * 60 * 1000 - ageMs) / 60000));
-                return (
-                  <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/30 transition-colors text-sm gap-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-medium text-foreground truncate block">{doc.title}</span>
-                      <div className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-2">
-                        <span>{doc.template || "—"}</span>
-                        <span>·</span>
-                        <span>{doc.page_size || "—"}</span>
-                        <span>·</span>
-                        <span>{formatBytes(doc.size_bytes)}</span>
-                        <span>·</span>
-                        <span className={minsLeft <= 5 ? "text-destructive font-medium" : "text-primary"}>
-                          Expires in {minsLeft}m
-                        </span>
-                      </div>
-                    </div>
-                    {doc.storage_path && (
-                      <Button size="sm" variant="outline" onClick={() => downloadDoc(doc)} className="shrink-0">
-                        <Download className="w-3 h-3 mr-1" /> Download
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </Card>
       </main>
       <Footer />

@@ -19,43 +19,31 @@ const fadeUp = {
 
 const TextToPdfFeature = () => {
   const features = [
-    { icon: Languages, title: "70+ Languages", desc: "Hindi, Arabic, Chinese, Japanese, Korean, Hinglish, Tamil, Telugu, Bengali and many more with automatic font selection" },
+    { icon: Languages, title: "Latin Scripts, Everywhere", desc: "English and every Latin-script language render correctly in both the browser tool and the API. Devanagari and Arabic fonts load in the browser tool — check your output, complex-script shaping is not applied yet" },
     { icon: Palette, title: "15 Professional Templates", desc: "Minimal, Professional, Creative, Modern, Classic, Elegant, Bold, Tech, Academic, Corporate, Artistic, Clean, Vibrant, Dark, Light" },
-    { icon: Globe, title: "Full RTL Support", desc: "Arabic, Hebrew, Urdu, Persian — bidirectional text rendering with correct layout and number handling" },
+    { icon: Shield, title: "Files Never Leave Your Browser", desc: "The web generator renders your PDF entirely on your device. Nothing is uploaded, nothing is stored — no signup, no watermark, no limits" },
     { icon: Layers, title: "Batch Generation", desc: "Generate up to 10 PDFs in a single API request. Perfect for invoices, certificates, reports at scale" },
-    { icon: Code, title: "REST API", desc: "Developer-friendly API with code examples in JavaScript, Python, PHP, Go, and cURL" },
-    { icon: Shield, title: "HTML & Markdown", desc: "Send raw HTML with CSS or plain text. Use tables, headings, images, custom styles — full control over layout" },
+    { icon: Code, title: "REST API", desc: "Developer-friendly API with code examples in JavaScript, Python, PHP, Go, and cURL. The API renders Latin scripts today" },
+    { icon: Globe, title: "HTML & Markdown", desc: "Send raw HTML with CSS or plain text. Use tables, headings, images, custom styles — full control over layout" },
   ];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Helmet>
-        <title>Text to PDF Converter — 70+ Languages, 15 Templates | PDFly</title>
-        <meta name="description" content="Convert any text, HTML, or markdown to beautiful PDFs in 70+ languages. Free REST API, 15 professional templates, batch generation, RTL support. No credit card." />
-        <meta name="keywords" content="text to PDF, HTML to PDF, markdown to PDF, Hindi PDF generator, Arabic PDF, multi-language PDF, free PDF API, PDFly" />
-        <meta property="og:title" content="Text to PDF — 70+ Languages, 15 Templates | PDFly" />
-        <meta property="og:description" content="Convert text to PDF in 70+ languages with PDFly. Free API, batch processing, RTL support." />
+        <title>Text to PDF Converter — 15 Templates, Runs In Your Browser | PDFly</title>
+        <meta name="description" content="Convert any text, HTML, or markdown to a PDF in your browser — files are never uploaded. 15 professional templates, 11 page sizes, free REST API with batch generation. No signup, no watermark." />
+        <meta name="keywords" content="text to PDF, HTML to PDF, markdown to PDF, Hindi PDF generator, Arabic PDF, client-side PDF, free PDF API, PDFly" />
+        <meta property="og:title" content="Text to PDF — 15 Templates, Runs In Your Browser | PDFly" />
+        <meta property="og:description" content="Convert text to PDF with PDFly. Files never leave your browser. Free API, batch processing, 15 templates." />
         <link rel="canonical" href={`${SITE_URL}/text-to-pdf`} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "SoftwareApplication",
-              name: "PDFly Text to PDF",
-              applicationCategory: "UtilitiesApplication",
-              operatingSystem: "Web",
-              offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
-              description: "Convert text, HTML, and markdown to PDF in 70+ languages with 15 templates",
-            },
-            {
-              "@type": "FAQPage",
-              "mainEntity": [
-                { "@type": "Question", "name": "How do I convert HTML to PDF in 70+ languages?", "acceptedAnswer": { "@type": "Answer", "text": "PDFly converts any HTML or plain text to PDF in 70+ languages. Set the language parameter in the API (e.g., `language: 'hi'` for Hindi) or use the web UI which auto-detects the script and applies the correct Noto font." } },
-                { "@type": "Question", "name": "Does PDFly support RTL languages like Arabic and Hebrew?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. PDFly has full RTL support for Arabic, Hebrew, Urdu, and Persian. Text direction, bidirectional number rendering, and table alignment are all handled automatically." } },
-                { "@type": "Question", "name": "How many PDFs can I batch-generate at once?", "acceptedAnswer": { "@type": "Answer", "text": "You can generate up to 5 PDFs in a single API call using the `documents` array. For larger batches, loop through in groups of 5." } },
-              ]
-            }
-          ]
+          "@type": "SoftwareApplication",
+          name: "PDFly Text to PDF",
+          applicationCategory: "UtilitiesApplication",
+          operatingSystem: "Web",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+          description: "Convert text, HTML, and markdown to PDF in your browser with 15 templates and 11 page sizes",
         })}</script>
       </Helmet>
       <Header />
@@ -74,7 +62,7 @@ const TextToPdfFeature = () => {
                   Convert Text to <span className="gradient-text">Beautiful PDFs</span>
                 </motion.h1>
                 <motion.p variants={fadeUp} custom={2} className="text-lg text-muted-foreground mb-8 leading-relaxed max-w-xl">
-                  Generate professional PDF documents from any text, HTML, or markdown content. Support for 70+ languages including Hindi, Arabic, Chinese with full RTL rendering. 15 templates, 11 page sizes, batch processing.
+                  Generate professional PDF documents from any text, HTML, or markdown content. The web generator runs entirely in your browser — your files are never uploaded. 15 templates, 11 page sizes, batch processing.
                 </motion.p>
                 <motion.div variants={fadeUp} custom={3} className="flex flex-wrap gap-4">
                   <Button size="lg" asChild className="btn-gradient-sweep bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%]">
@@ -141,12 +129,14 @@ const TextToPdfFeature = () => {
         {/* Supported Languages Preview */}
         <section className="py-16">
           <div className="container mx-auto px-4 max-w-4xl text-center">
-            <h2 className="text-2xl font-bold font-display text-foreground mb-8">Supported Languages (70+)</h2>
+            <h2 className="text-2xl font-bold font-display text-foreground mb-4">Languages In The Browser Tool</h2>
+            <p className="text-sm text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Pick a language and the matching Noto font is fetched and embedded automatically — Devanagari, Arabic script and Simplified Chinese. Latin-script languages render with the built-in fonts. The REST API renders Latin scripts today.
+            </p>
             <div className="flex flex-wrap justify-center gap-2 mb-8">
-              {["English", "Hindi", "Hinglish", "Arabic", "Chinese", "Japanese", "Korean", "Tamil", "Telugu", "Bengali", "Gujarati", "Punjabi", "Urdu", "Thai", "Vietnamese", "Russian", "French", "German", "Spanish", "Portuguese"].map(lang => (
+              {["English", "Hindi", "Marathi", "Sanskrit", "Nepali", "Arabic", "Persian", "Urdu", "Chinese (Simplified)", "Spanish", "French", "German", "Portuguese", "Italian"].map(lang => (
                 <span key={lang} className="px-3 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">{lang}</span>
               ))}
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">+50 more</span>
             </div>
           </div>
         </section>

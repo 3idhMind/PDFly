@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { SITE_URL } from "@/lib/config";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { getIdToken } from "@/lib/firebase/auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
@@ -39,15 +40,7 @@ const Status = () => {
   ]);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [checking, setChecking] = useState(false);
-  const [user, setUser] = useState<unknown>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => listener.subscription.unsubscribe();
-  }, []);
+  const { user } = useAuth();
 
   const checkServices = async () => {
     setChecking(true);
@@ -55,34 +48,36 @@ const Status = () => {
     // --- Infrastructure checks (no auth needed) ---
     const infra: ServiceCheck[] = [];
 
-    // 1. Backend Services (API + DB) via Supabase client
+    // 1 & 2. One call to our own health endpoint, which probes each dependency
+    // separately and reports them individually — so a failure names the thing
+    // that is actually broken rather than collapsing to "backend down".
     try {
       const start = Date.now();
-      const { error } = await supabase.from("profiles").select("id", { count: "exact", head: true });
+      const res = await fetch("/api/health");
       const latency = Date.now() - start;
+      const data = await res.json();
+      const svc = (name: string) =>
+        (data.services ?? []).find((s: { name: string }) => s.name === name);
+
+      const database = svc("firestore");
       infra.push({
-        name: "Backend Services",
-        status: error ? "degraded" : "operational",
-        latency,
+        name: "Database",
+        status: database?.ok ? "operational" : "degraded",
+        latency: database?.latencyMs ?? latency,
         icon: Database,
-        description: "API Gateway & Database",
+        description: "Firestore",
+      });
+
+      infra.push({
+        name: "API",
+        status: res.ok && data.status === "operational" ? "operational" : "degraded",
+        latency,
+        icon: Zap,
+        description: "Serverless compute layer",
       });
     } catch {
-      infra.push({ name: "Backend Services", status: "down", icon: Database, description: "API Gateway & Database" });
-    }
-
-    // 2. Edge Functions via health-check endpoint (CORS-safe via Supabase client)
-    try {
-      const start = Date.now();
-      const { data, error } = await supabase.functions.invoke("health-check");
-      const latency = Date.now() - start;
-      if (error || !data?.status || data.status !== "ok") {
-        infra.push({ name: "Edge Functions", status: "degraded", latency, icon: Zap, description: "Serverless compute layer" });
-      } else {
-        infra.push({ name: "Edge Functions", status: "operational", latency, icon: Zap, description: "Serverless compute layer" });
-      }
-    } catch {
-      infra.push({ name: "Edge Functions", status: "down", icon: Zap, description: "Serverless compute layer" });
+      infra.push({ name: "Database", status: "down", icon: Database, description: "Firestore" });
+      infra.push({ name: "API", status: "down", icon: Zap, description: "Serverless compute layer" });
     }
 
     // 3. PDF Engine — client-side library (always available if page loaded)
@@ -105,10 +100,16 @@ const Status = () => {
       const auth: ServiceCheck[] = [];
       try {
         const start = Date.now();
-        const { data, error } = await supabase.functions.invoke("auth-health-check");
+        // /api/keys requires a valid ID token, so a 200 proves the whole
+        // authenticated path works end to end — token minting, verification,
+        // and an authorised Firestore read — not just that a server answered.
+        const token = await getIdToken();
+        const res = await fetch("/api/keys", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const latency = Date.now() - start;
 
-        const isOperational = !error && data?.status === "ok" && data?.check === "authenticated";
+        const isOperational = res.ok;
 
         auth.push({
           name: "API Authentication",

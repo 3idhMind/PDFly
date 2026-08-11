@@ -204,9 +204,6 @@ export function assessJob(totalBytes: number): ProcessingPlan {
   };
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < MB) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * MB) return `${(bytes / MB).toFixed(1)} MB`;
-  return `${(bytes / (1024 * MB)).toFixed(2)} GB`;
-}
+// Canonical implementation lives in lib/utils.ts. Re-exported here so existing
+// `import { formatBytes } from "@/lib/deviceCapability"` call sites keep working.
+export { formatBytes } from "./utils";

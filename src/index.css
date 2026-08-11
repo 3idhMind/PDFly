@@ -1,8 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Syne:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
+/* Fonts are loaded from index.html. Do NOT add an @import here: it would sit
+   after the @tailwind directives, which is invalid CSS, and Vite strips it
+   without failing the build. That silently killed the whole type stack once
+   already — see _internal/MISTAKES-AND-LEARNINGS.md L-003. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
     /* Warm off-white background */

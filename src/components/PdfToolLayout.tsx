@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -14,6 +13,11 @@ const OTHER_TOOLS = [
   { href: "/pdf-to-images", label: "PDF to Images" },
   { href: "/images-to-pdf", label: "Images to PDF" },
   { href: "/app", label: "Text to PDF" },
+  { href: "/resize-image", label: "Resize Image to KB" },
+  { href: "/id-photo-crop", label: "ID Photo Crop" },
+  { href: "/rotate-pdf", label: "Rotate PDF" },
+  { href: "/delete-pdf-pages", label: "Delete PDF Pages" },
+  { href: "/reorder-pdf-pages", label: "Reorder PDF Pages" },
 ];
 
 interface Props {
@@ -23,10 +27,18 @@ interface Props {
   metaDescription: string;
   tagline: string;
   faqs?: { q: string; a: string }[];
+  /**
+   * Optional HowTo schema steps. AI answer engines (Google AI Overviews,
+   * Perplexity, ChatGPT) weight FAQPage/HowTo schema heavily when deciding
+   * what to quote directly — see _internal/STRATEGY.md's AEO/GEO notes.
+   * Not every page has this populated yet; add real steps per tool rather
+   * than a generic "drop file, click button, download" that says nothing.
+   */
+  howToSteps?: string[];
   children: ReactNode;
 }
 
-export const PdfToolLayout = ({ slug, title, metaTitle, metaDescription, tagline, faqs, children }: Props) => {
+export const PdfToolLayout = ({ slug, title, metaTitle, metaDescription, tagline, faqs, howToSteps, children }: Props) => {
   const canonical = `${SITE_URL}/${slug}`;
   const softwareLd = {
     "@context": "https://schema.org",
@@ -36,7 +48,12 @@ export const PdfToolLayout = ({ slug, title, metaTitle, metaDescription, tagline
     operatingSystem: "Any",
     url: canonical,
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-    aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", ratingCount: "128" },
+    // No aggregateRating. There was a hardcoded 4.9 from 128 ratings here, on
+    // every tool page, on a site that has never collected a single review.
+    // That is fabricated structured data, it breaches Google's review-snippet
+    // policy, and on a product whose entire pitch is "you can verify this
+    // yourself" it is the worst possible thing to be caught doing.
+    // Add it back only when real reviews exist and are shown on the page.
   };
   const faqLd = faqs && {
     "@context": "https://schema.org",
@@ -47,14 +64,23 @@ export const PdfToolLayout = ({ slug, title, metaTitle, metaDescription, tagline
       acceptedAnswer: { "@type": "Answer", text: f.a },
     })),
   };
+  const howToLd = howToSteps && howToSteps.length > 0 && {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: title,
+    step: howToSteps.map((s, i) => ({ "@type": "HowToStep", position: i + 1, text: s })),
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead title={metaTitle} description={metaDescription} canonical={canonical} />
-      <Helmet>
-        <script type="application/ld+json">{JSON.stringify(softwareLd)}</script>
-        {faqLd && <script type="application/ld+json">{JSON.stringify(faqLd)}</script>}
-      </Helmet>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareLd) }} />
+      {faqLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      )}
+      {howToLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToLd) }} />
+      )}
       <Header />
 
       <main className="flex-1 container mx-auto px-5 py-10 md:py-14 max-w-4xl">

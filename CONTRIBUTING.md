@@ -6,9 +6,11 @@ Thank you for your interest in contributing to PDFly! This guide will help you g
 
 ### Prerequisites
 
-- **Node.js** 18+ (recommended: use [nvm](https://github.com/nvm-sh/nvm))
+- **Node.js** 20+ (recommended: use [nvm](https://github.com/nvm-sh/nvm)) — the build
+  scripts rely on Node's native TypeScript type-stripping
 - **npm** or **bun** package manager
-- A **Supabase** project (free tier works fine)
+- A **Firebase** project (free Spark tier works fine) — only needed if you're working on
+  sign-in or the API. The browser PDF tools run fully client-side and need no backend at all.
 
 ### Local Setup
 
@@ -27,11 +29,14 @@ Thank you for your interest in contributing to PDFly! This guide will help you g
    ```bash
    cp .env.example .env
    ```
-   Fill in your Supabase credentials in `.env`:
-   - `VITE_SUPABASE_URL` — Your Supabase project URL
-   - `VITE_SUPABASE_PUBLISHABLE_KEY` — Your Supabase anon/public key
-   - `VITE_SUPABASE_PROJECT_ID` — Your Supabase project reference ID
-   - `VITE_SITE_URL` — Your deployment URL (use `http://localhost:8080` for local dev)
+   `.env.example` documents every variable and, importantly, which ones are secrets.
+   Short version:
+   - `VITE_FIREBASE_*` (6 vars) — Firebase **web** config. Compiled into the browser
+     bundle, public by design. Firestore rules do the access control, not secrecy.
+   - `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` — the
+     service account used by the `api/` functions. **Real secrets.** Never prefix these
+     with `VITE_`; that would publish them to every visitor.
+   - `VITE_SITE_URL` — your deployment URL (`http://localhost:8080` for local dev)
 
 4. **Start Development Server**
    ```bash
@@ -92,14 +97,30 @@ src/
 ├── components/      # Reusable UI components
 │   └── ui/          # shadcn/ui primitives
 ├── hooks/           # Custom React hooks
-├── integrations/    # Supabase client and types
-├── lib/             # Utility functions (PDF generation, image conversion, config)
+├── lib/
+│   ├── firebase/    # Firebase client, auth, Firestore helpers
+│   ├── routeMeta.ts # Per-route SEO metadata — single source of truth
+│   └── ...          # PDF generation, image conversion, utils
 ├── pages/           # Route-level page components
 └── types/           # TypeScript type definitions
 
-supabase/
-└── functions/       # Edge functions (serverless backend)
+api/                 # Vercel Functions (Node.js serverless backend)
+└── _lib/            # Shared: auth, API keys, quota, rate limiting
+
+scripts/
+└── postbuild.mjs    # Prerenders every route + generates dist/sitemap.xml
 ```
+
+### Adding a page
+
+Two files, both required, or the page will not be indexable:
+
+1. `src/lib/routeMeta.ts` — title, description, sitemap priority
+2. `src/App.tsx` — the route itself
+
+`sitemap.xml` is **generated**, never hand-edited — it does not exist in the repo, only in
+`dist/` after a build. Verify with `npm run build && npx serve dist` (not `vite preview`,
+which SPA-rewrites everything and hides prerender bugs).
 
 ## 📝 Pull Request Guidelines
 

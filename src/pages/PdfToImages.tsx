@@ -24,7 +24,10 @@ const PdfToImages = () => {
     const scale = Math.pow(parseInt(dpi) / 150, 2);
     return Math.round(total * scale);
   }, [files, dpi]);
-  const { plan } = useProcessingPlan(weightedBytes);
+  // `blocked` was previously never destructured, so the too-large state showed
+  // its red panel and then let the user click Convert anyway — straight into a
+  // local render that can hang the tab. That is the bug this gates.
+  const { plan, blocked } = useProcessingPlan(weightedBytes);
 
 
   const handleConvert = async () => {
@@ -90,6 +93,14 @@ const PdfToImages = () => {
             </label>
           </div>
 
+          {/*
+            cloudAvailable={false} is correct here and is NOT the same omission
+            as the missing `blocked` gate above. Rasterising a PDF page needs a
+            <canvas>, which the Deno server runtime does not have — the fallback
+            function implements merge/split/compress/images-to-pdf and nothing
+            else. There is genuinely no cloud option for this tool, so offering
+            a consent checkbox would be offering something that cannot happen.
+          */}
           <CapabilityNotice
             plan={plan}
             cloudConsent={false}
@@ -98,13 +109,15 @@ const PdfToImages = () => {
           />
           {plan && plan.level !== "safe" && (
             <p className="text-xs text-muted-foreground">
-              Tip: lower the resolution to 72 or 150 DPI to make this comfortably fit on your device.
+              Rendering cost rises with the square of the resolution, so dropping 300 → 150 DPI
+              cuts this job to a quarter of its size — usually enough to bring it back within
+              what this device can handle.
             </p>
           )}
 
-          <Button onClick={handleConvert} disabled={busy} size="lg" className="w-full">
+          <Button onClick={handleConvert} disabled={busy || blocked} size="lg" className="w-full">
             {busy ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <ImageIcon className="w-5 h-5 mr-2" />}
-            {busy ? "Converting..." : "Convert to Images"}
+            {busy ? "Converting..." : blocked ? "Lower the resolution to continue" : "Convert to Images"}
           </Button>
           <p className="text-center text-xs text-muted-foreground -mt-2">
             <FileDown className="w-3 h-3 inline mr-1" /> Free · no watermark · no signup

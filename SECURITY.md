@@ -32,18 +32,41 @@ If you discover a security vulnerability in PDFly, please report it responsibly:
 
 ## Security Best Practices for Contributors
 
-- **Never commit secrets** — API keys, tokens, passwords must stay in environment variables
-- **Never hardcode URLs** — Use `SITE_URL` from `src/lib/config.ts`
-- **Validate all inputs** — Both client-side and in edge functions
-- **Use RLS policies** — All database tables must have Row Level Security enabled
-- **Keep dependencies updated** — Run `npm audit` regularly
+- **Never commit secrets.** `.env` is gitignored. `.env.example` is the tracked template.
+- **Know which env vars are public.** Anything `VITE_`-prefixed is compiled into the browser
+  bundle and readable by any visitor — that is correct for Firebase *web* config. The
+  service-account credentials (`FIREBASE_PRIVATE_KEY` and friends) are server-only and must
+  never gain a `VITE_` prefix.
+- **Never hardcode URLs** — use `SITE_URL` from `src/lib/config.ts`, or `SITE_ORIGIN` from
+  `src/lib/routeMeta.ts` for anything SEO-facing.
+- **Validate all inputs** — both client-side and in the `api/` functions.
+- **Firestore rules are the access control.** Any new collection needs a matching rule in
+  `firestore.rules`; a collection with no rule is not "default private" in a useful sense —
+  write the rule.
+- **Keep dependencies updated** — run `npm audit` regularly.
 
 ## Architecture Security
 
-- **Client-side processing**: Image-to-PDF conversion happens entirely in the browser — no images are uploaded to any server
-- **API key hashing**: API keys are stored as SHA-256 hashes; raw keys are never persisted
-- **Edge functions**: All serverless functions validate inputs and enforce rate limits
-- **CORS**: Edge functions use permissive CORS for API access but validate authentication
+- **Client-side processing**: the web tools (merge, split, compress, image/PDF conversion,
+  resize, crop) run entirely in the browser. Files are never uploaded. Server processing via
+  the REST API is opt-in and separate.
+- **Authentication**: Firebase Authentication, Google sign-in. The account is shared across
+  3idhMinds products — see the Privacy Policy.
+- **API key hashing**: keys are stored as SHA-256 hashes. The raw key is shown once at
+  creation and never persisted; only a short display prefix is kept.
+- **Serverless functions**: the Vercel Functions under `api/` authenticate the caller, apply
+  per-key rate limits and monthly quotas, validate magic bytes on uploaded files, and guard
+  URL inputs against SSRF (including DNS-rebinding checks).
+- **Error logging**: errors are logged by name only — never request bodies, file contents,
+  or key material.
+
+### Known gaps, stated honestly
+
+- The REST API endpoints under `api/` were ported from the previous Deno/Supabase
+  implementation and their adversarial review pass has **not** completed. Treat the API as
+  pre-release; the browser tools are the supported surface.
+- API responses currently return PDFs inline as base64 rather than via expiring signed
+  storage URLs. Object storage is planned and tracked in-code as `TODO(stage-3)`.
 
 ## Scope
 
@@ -61,7 +84,9 @@ The following are **out of scope**:
 - Denial of service (DoS/DDoS)
 - Social engineering
 - Physical attacks
-- Third-party service vulnerabilities (e.g., Supabase infrastructure)
+- Third-party service vulnerabilities (e.g. Firebase or Vercel infrastructure)
+- Values in the client bundle that are public by design (`VITE_FIREBASE_*` web config) —
+  these are not secrets; report a missing **Firestore rule** instead, which is in scope
 
 ---
 

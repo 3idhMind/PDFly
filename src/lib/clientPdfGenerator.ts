@@ -302,20 +302,40 @@ function renderPdf(
 // Detects script of content; loads matching Noto Sans variant on demand.
 // Fonts are fetched from jsDelivr CDN (gstatic mirror) only when needed.
 const FONT_URLS: Record<string, { url: string; family: string }> = {
-  devanagari: { url: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-devanagari@5.0.13/files/noto-sans-devanagari-devanagari-400-normal.woff", family: "NotoDevanagari" },
-  arabic:     { url: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-arabic@5.0.13/files/noto-sans-arabic-arabic-400-normal.woff", family: "NotoArabic" },
-  cjk:        { url: "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.13/files/noto-sans-sc-chinese-simplified-400-normal.woff", family: "NotoCJK" },
+  // MUST be .ttf. This previously fetched .woff from @fontsource and it never
+  // worked: jsPDF's parser reads raw TrueType, WOFF is table-wise compressed,
+  // and addFont fails with "No unicode cmap for font". jsPDF routes that error
+  // through its PubSub, so nothing throws and nothing looks broken at the call
+  // site — the text just silently doesn't render. Verified against jspdf@4.2.1.
+  //
+  // googlefonts/noto-fonts ships real hinted TTFs. @fontsource v5 publishes
+  // woff/woff2 only, and the @expo-google-fonts CJK packages are OTF/CFF at
+  // 4MB+ which jsPDF also cannot parse — hence no CJK entry here.
+  devanagari: {
+    url: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSansDevanagari/NotoSansDevanagari-Regular.ttf",
+    family: "NotoDevanagari",
+  },
+  arabic: {
+    url: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts@main/hinted/ttf/NotoSansArabic/NotoSansArabic-Regular.ttf",
+    family: "NotoArabic",
+  },
 };
 
 const fontCache = new Map<string, string>(); // family -> base64
 
 function detectScript(text: string, language: string): keyof typeof FONT_URLS | null {
+  // Only scripts we have a working font for. ja/ko/zh used to map to a
+  // Simplified-Chinese font containing no kana and no hangul, and `he` mapped
+  // to the Arabic font — a different script entirely. Both produced
+  // confident-looking garbage, which is worse than falling back to Latin.
   if (["hi", "mr", "sa", "ne"].includes(language)) return "devanagari";
-  if (["ar", "fa", "ur", "he"].includes(language)) return "arabic";
-  if (["zh", "ja", "ko"].includes(language)) return "cjk";
+  if (["ar", "fa", "ur"].includes(language)) return "arabic";
   if (/[\u0900-\u097F]/.test(text)) return "devanagari";
   if (/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF]/.test(text)) return "arabic";
-  if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF]/.test(text)) return "cjk";
+  // No CJK branch: jsPDF cannot parse the OTF/CFF CJK fonts, and a full CJK
+  // TTF is multi-megabyte \u2014 not something to push down a 4G connection mid-job.
+  // CJK content falls back to Latin, which at least fails visibly rather than
+  // pretending to have worked.
   return null;
 }
 

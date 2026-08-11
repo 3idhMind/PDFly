@@ -1,0 +1,154 @@
+rules_version = '2';
+
+// PDFly / idhtools — Firestore Security Rules
+//
+// Guiding rule: the client may manage its own identity, and nothing else.
+// Anything that costs money, grants access, or enforces a limit is written
+// only by the server (Admin SDK, which bypasses these rules entirely).
+//
+// This is a direct response to a flaw in the Supabase version being replaced:
+// the `api_keys` RLS policy allowed a user to UPDATE their own key row with no
+// column restriction, so a user could set their own `rate_limit_per_min` to
+// anything they liked. Rate limits you can edit are not rate limits.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    /** Keys this write is adding, removing or changing. */
+    function touched() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // ---------------------------------------------------------------- users
+    // A user owns their profile. The allow-list is what stops a client from
+    // inventing a field we later trust — `role`, `plan`, `quotaOverride`.
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+             'email', 'displayName', 'photoURL', 'emailVerified',
+             'createdAt', 'lastLoginAt', 'firstSeenAt',
+             'globalSettings',
+             'authMethods', 'authMethodList', 'lastAuthMethod',
+             'firstProductId', 'productIds', 'productCount'
+           ]);
+
+      allow update: if isOwner(uid)
+        && touched().hasOnly([
+             'email', 'displayName', 'photoURL', 'emailVerified', 'lastLoginAt',
+             'globalSettings',
+             'authMethods', 'authMethodList', 'lastAuthMethod',
+             'productIds', 'productCount'
+           ])
+        // firstProductId, firstSeenAt and createdAt are write-once. The whole
+        // point of recording which product brought a user in is that it stays
+        // true; a field the client can rewrite later answers nothing.
+        && !touched().hasAny(['firstProductId', 'firstSeenAt', 'createdAt']);
+
+      // Account deletion is a server operation — it has to cascade to API keys,
+      // usage and activity, which the client cannot see or touch.
+      allow delete: if false;
+
+      // ------------------------------------------------------- activity log
+      // Append-only. The owner may read their own history and add to it, but
+      // nothing can ever edit or erase an entry — an audit trail you can
+      // rewrite is not an audit trail. Server-side writes bypass these rules,
+      // so anything security-relevant is still recorded by the API.
+      match /activity/{entryId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.type is string
+          && request.resource.data.keys().size() <= 12;
+        allow update, delete: if false;
+      }
+
+      // ----------------------------------------------------- products/{pid}
+      // Membership marker for each tool the account has used. Deliberately
+      // holds no counters: see the usage subcollection below.
+      match /products/{productId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(
+               ['productId', 'joinedAt', 'lastUsedAt', 'joinOrder']
+             );
+        // joinedAt and joinOrder are write-once for the same reason
+        // firstProductId is: the join sequence has to stay honest.
+        allow update: if isOwner(uid)
+          && touched().hasOnly(['lastUsedAt'])
+          && !touched().hasAny(['joinedAt', 'joinOrder', 'productId']);
+        allow delete: if false;
+
+        // ------------------------------------------- usage/{YYYY-MM}
+        // One document per calendar month. Readable so the UI can show
+        // "37 / 100 PDFs this month", but WRITTEN ONLY BY THE SERVER.
+        // If a client could write here it could zero its own quota, and the
+        // free tier would be decorative.
+        match /usage/{month} {
+          allow read: if isOwner(uid);
+          allow write: if false;
+        }
+      }
+    }
+
+    // ------------------------------------------------------------- apiKeys
+    // Top-level, document ID = SHA-256 hex of the raw key.
+    //
+    // Server-only in both directions. Denying reads is not paranoia about the
+    // hash being crackable (it isn't — the key is 256 bits of CSPRNG output);
+    // it is that every key operation — create, list, revoke — runs through our
+    // API anyway, so there is no reason for this collection to have a client
+    // surface at all. No surface, no bugs in it.
+    match /apiKeys/{keyHash} {
+      allow read, write: if false;
+    }
+
+    // ------------------------------------------------------------ feedback
+    // Write-only drop box. Anyone may submit; nobody may read it back, so one
+    // submitter can never enumerate everyone else's messages.
+    match /feedback/{docId} {
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['name', 'email', 'message', 'rating', 'createdAt', 'path']
+                       )
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() <= 5000;
+      allow read, update, delete: if false;
+    }
+
+    // ------------------------------------------------------------- products
+    // Registry of every tool in the idhtools ecosystem. Readable so a product
+    // can render "you haven't tried X yet" from a single small collection
+    // instead of probing each user subtree. Server-written only.
+    match /products/{productId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // ---------------------------------------------------------------- errors
+    // Client crash reports. Written by the API, never read by a client.
+    match /errors/{errorId} {
+      allow read, write: if false;
+    }
+
+    // Anything not matched above is denied. Adding a collection means adding
+    // a rule for it — never widen this.
+    //
+    // NOTE FOR FUTURE PRODUCTS: never introduce a collectionGroup() query over
+    // `products`, `usage` or `activity`. Those names repeat under every user,
+    // so a collection-group read scans across the entire ecosystem — every
+    // user, every tool — and one product's dashboard would start billing for
+    // every other product's data. Aggregate server-side instead.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

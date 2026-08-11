@@ -1,0 +1,205 @@
+/**
+ * Postbuild: prerender one real HTML file per route, then generate the sitemap.
+ *
+ * THE PROBLEM THIS SOLVES
+ * PDFly is a client-rendered SPA. Before this script, every URL — /merge-pdf,
+ * /compress-pdf, /docs, all 40 of them — returned the same 6,275-byte shell
+ * carrying the homepage's <title>, with an empty <div id="root">. /compress-pdf
+ * contained zero occurrences of the word "compress". Google had nothing to rank
+ * on any page, which made every other piece of SEO work pointless.
+ *
+ * HOW IT WORKS
+ * Vercel checks the filesystem BEFORE applying the rewrites in vercel.json.
+ * So writing dist/merge-pdf/index.html means that file is served for
+ * /merge-pdf, and only unmatched paths fall through to the SPA catch-all.
+ * React then hydrates over it exactly as before — the user-facing behaviour is
+ * unchanged, but a crawler now gets a real document on first response.
+ *
+ * This is deliberately a string transform on the built shell rather than a
+ * headless-browser render. It cannot go stale relative to the bundle, it adds
+ * ~no build time, and it needs no extra dependency. The tradeoff is that the
+ * <body> is still the empty root div — crawlers get real metadata and real
+ * <h1>/<p> content from the injected block below, not a full DOM snapshot.
+ * That is enough to be indexed and ranked; full SSR is a V2 conversation.
+ *
+ * Run: node scripts/postbuild.mjs   (wired into `npm run build`)
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const dist = join(root, "dist");
+
+/* ------------------------------------------------------------------ inputs */
+
+if (!existsSync(join(dist, "index.html"))) {
+  console.error("[postbuild] dist/index.html not found — run `vite build` first.");
+  process.exit(1);
+}
+
+// Node strips the TypeScript types natively, so the app and this script share
+// one metadata source instead of drifting apart.
+const { ROUTES, SITE_ORIGIN } = await import(
+  pathToFileURL(join(root, "src/lib/routeMeta.ts")).href
+);
+
+/**
+ * Blog posts are parsed out of Blog.tsx rather than duplicated here, so adding
+ * a post stays a one-file change. Brittle-by-nature, so it fails loudly: a
+ * regex that silently matches nothing would quietly drop every post from both
+ * the prerender and the sitemap.
+ */
+function readBlogPosts() {
+  const src = readFileSync(join(root, "src/pages/Blog.tsx"), "utf8");
+  const posts = [];
+  const entry = /\{\s*slug:\s*"([^"]+)",\s*title:\s*"((?:[^"\\]|\\.)*)",\s*excerpt:\s*"((?:[^"\\]|\\.)*)"/g;
+  let m;
+  while ((m = entry.exec(src))) {
+    posts.push({
+      slug: m[1],
+      title: m[2].replace(/\\"/g, '"'),
+      excerpt: m[3].replace(/\\"/g, '"'),
+    });
+  }
+  if (posts.length === 0) {
+    console.error(
+      "[postbuild] Parsed 0 blog posts from src/pages/Blog.tsx.\n" +
+        "  The blogPosts array shape probably changed. Fix the regex in readBlogPosts()\n" +
+        "  rather than letting every blog URL silently vanish from the sitemap.",
+    );
+    process.exit(1);
+  }
+  return posts;
+}
+
+/* ------------------------------------------------------------ transformation */
+
+const esc = (s) =>
+  String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const shell = readFileSync(join(dist, "index.html"), "utf8");
+
+function buildHtml({ path, title, description, noindex }) {
+  const canonical = path === "/" ? SITE_ORIGIN : `${SITE_ORIGIN}${path}`;
+  const t = esc(title);
+  const d = esc(description);
+
+  let html = shell;
+
+  // Replace, don't append — leaving the shell's homepage tags in place would
+  // give every page two titles and two descriptions.
+  html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${t}</title>`);
+  html = html.replace(
+    /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/,
+    `<meta name="description" content="${d}">`,
+  );
+  html = html.replace(
+    /<meta\s+property="og:title"\s+content="[^"]*"\s*\/?>/g,
+    `<meta property="og:title" content="${t}">`,
+  );
+  html = html.replace(
+    /<meta\s+property="og:description"\s+content="[^"]*"\s*\/?>/g,
+    `<meta property="og:description" content="${d}">`,
+  );
+  html = html.replace(
+    /<meta\s+name="twitter:title"\s+content="[^"]*"\s*\/?>/g,
+    `<meta name="twitter:title" content="${t}">`,
+  );
+  html = html.replace(
+    /<meta\s+name="twitter:description"\s+content="[^"]*"\s*\/?>/g,
+    `<meta name="twitter:description" content="${d}">`,
+  );
+  html = html.replace(
+    /<meta\s+property="og:url"\s+content="[^"]*"\s*\/?>/g,
+    `<meta property="og:url" content="${canonical}">`,
+  );
+
+  // Replace the shell's robots tag rather than adding a second one. Appending
+  // left /auth carrying both `index, follow` and `noindex` — and the shell's
+  // came first, so the page advertised itself as indexable.
+  const robots = noindex ? "noindex, follow" : "index, follow";
+  const robotsTag = `<meta name="robots" content="${robots}">`;
+  html = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/.test(html)
+    ? html.replace(/<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/, robotsTag)
+    : html.replace("</head>", `    ${robotsTag}\n  </head>`);
+
+  // Canonical is appended, not replaced: the site-wide canonical was removed
+  // from index.html precisely because it pointed every URL at the homepage.
+  html = html.replace("</head>", `    <link rel="canonical" href="${canonical}">\n  </head>`);
+
+  // A crawler that does not execute JS still needs words on the page. This is
+  // hidden from sighted users (React replaces #root on hydrate) but is real,
+  // non-duplicated content matching the page's own metadata — not keyword
+  // stuffing, and not text that contradicts what the rendered page says.
+  const noscript =
+    `<div id="prerender-content" style="position:absolute;width:1px;height:1px;` +
+    `overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">` +
+    `<h1>${t}</h1><p>${d}</p></div>`;
+  html = html.replace('<div id="root"></div>', `<div id="root"></div>\n    ${noscript}`);
+
+  return html;
+}
+
+function writeRoute(path, html) {
+  const dir = path === "/" ? dist : join(dist, path);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "index.html"), html, "utf8");
+}
+
+/* ---------------------------------------------------------------- prerender */
+
+const blogPosts = readBlogPosts();
+
+const allRoutes = [
+  ...ROUTES,
+  ...blogPosts.map((p) => ({
+    path: `/blog/${p.slug}`,
+    title: `${p.title} | PDFly`,
+    description: p.excerpt,
+    priority: 0.6,
+    changefreq: "monthly",
+  })),
+];
+
+for (const route of allRoutes) {
+  writeRoute(route.path, buildHtml(route));
+}
+
+/* ------------------------------------------------------------------ sitemap */
+
+const today = new Date().toISOString().slice(0, 10);
+const sitemapEntries = allRoutes
+  .filter((r) => !r.noindex)
+  .map((r) => {
+    const loc = r.path === "/" ? SITE_ORIGIN : `${SITE_ORIGIN}${r.path}`;
+    return [
+      "  <url>",
+      `    <loc>${loc}</loc>`,
+      `    <lastmod>${today}</lastmod>`,
+      `    <changefreq>${r.changefreq}</changefreq>`,
+      `    <priority>${r.priority.toFixed(1)}</priority>`,
+      "  </url>",
+    ].join("\n");
+  })
+  .join("\n");
+
+writeFileSync(
+  join(dist, "sitemap.xml"),
+  `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    `${sitemapEntries}\n` +
+    `</urlset>\n`,
+  "utf8",
+);
+
+console.log(
+  `[postbuild] prerendered ${allRoutes.length} routes ` +
+    `(${ROUTES.length} static + ${blogPosts.length} blog), ` +
+    `sitemap has ${allRoutes.filter((r) => !r.noindex).length} URLs`,
+);

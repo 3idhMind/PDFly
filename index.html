@@ -10,17 +10,18 @@
     <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDFly — Free PDF Generator API | 70+ Languages</title>
-    <meta name="description" content="PDFly by 3idhMind — Generate beautiful PDFs from HTML/text in 70+ languages. Free REST API, 15 templates, batch generation. No credit card required.">
-    <meta name="keywords" content="PDF generator, HTML to PDF, free PDF API, multi-language PDF, Hindi PDF, Arabic PDF, PDFly, 3idhMind, document generator, PDF converter, REST API, batch PDF" />
+    <title>PDFly — Free PDF Tools & API | Files Never Leave Your Browser</title>
+    <meta name="description" content="PDFly by 3idhMind — Merge, split, compress and convert PDFs entirely in your browser. Your files are never uploaded. Free REST API for developers, 15 templates, no credit card.">
+    <meta name="keywords" content="PDF tools, merge PDF, split PDF, compress PDF, image to PDF, HTML to PDF, free PDF API, client-side PDF, private PDF tools, PDFly, 3idhMind" />
     <meta name="author" content="3idhMind" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#6C63FF" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="PDFly" />
-    <link rel="canonical" href="https://pdfly.3idhmind.in" />
+    <meta name="theme-color" content="#00B3A6" />
+    <!--
+      NO site-wide canonical here. There was one pointing at the homepage, which
+      told Google that all 40 sitemap URLs were duplicates of "/" — an explicit
+      instruction to drop every tool and blog page from the index. Canonicals are
+      per-route and belong in SEOHead.
+    -->
 
     
     
@@ -37,74 +38,66 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebApplication",
-          "name": "PDFly",
-          "description": "Free universal PDF generation platform with REST API support for 70+ languages and 15 templates. By 3idhMind.",
-          "url": "https://pdfly.3idhmind.in",
-          "applicationCategory": "Productivity",
-          "operatingSystem": "Web",
-          "creator": {
-            "@type": "Organization",
-            "name": "3idhMind",
-            "url": "https://3idhmind.in"
-          },
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "INR"
-          },
-          "featureList": [
-            "70+ language support",
-            "15 professional templates",
-            "REST API access",
-            "RTL language support",
-            "11 page sizes",
-            "Batch PDF generation",
-            "Free during beta"
-          ]
-        },
-        {
-          "@type": "FAQPage",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "What is PDFly?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "PDFly by 3idhMind is a free universal PDF generation platform and REST API supporting 70+ languages including Hindi, Arabic RTL, Chinese, Japanese, Korean, and 15 professional templates."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "How to convert HTML to PDF using a free REST API?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Send a POST request to https://pdfly.3idhmind.in/api/generate-pdf with JSON payload containing your HTML string in the 'content' field and your API key in the Authorization header."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Does PDFly support Hindi Devanagari and Arabic RTL fonts?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes, PDFly natively auto-detects and renders Devanagari (Hindi, Marathi), Arabic/Urdu (Right-to-Left), CJK, and 70+ languages without font rendering corruption."
-              }
-            }
-          ]
-        }
+      "@type": "WebApplication",
+      "name": "PDFly",
+      "description": "Free PDF platform that processes your files entirely in the browser — merge, split, compress, convert — plus a free REST API for developers. By 3idhMind.",
+      "url": "https://pdfly.3idhmind.in",
+      "applicationCategory": "Productivity",
+      "operatingSystem": "Web",
+      "creator": {
+        "@type": "Organization",
+        "name": "3idhMind",
+        "url": "https://3idhmind.in"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      },
+      "featureList": [
+        "Client-side processing — files never leave your browser",
+        "Merge, split and compress PDF",
+        "Image to PDF and PDF to image",
+        "Free REST API",
+        "15 professional templates",
+        "11 page sizes",
+        "Batch PDF generation",
+        "No watermarks, no signup"
       ]
     }
     </script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <meta property="og:title" content="PDFly — Free Universal PDF Generator | 70+ Languages, REST API">
-  <meta name="twitter:title" content="PDFly — Free Universal PDF Generator | 70+ Languages, REST API">
-  <meta property="og:description" content="PDFly by 3idhMind — Generate beautiful PDFs from HTML/text in 70+ languages. Free REST API, 15 templates, batch generation. No credit card required.">
-  <meta name="twitter:description" content="PDFly by 3idhMind — Generate beautiful PDFs from HTML/text in 70+ languages. Free REST API, 15 templates, batch generation. No credit card required.">
+    <!--
+      Design-system fonts (DM Sans / Syne / Instrument Serif / JetBrains Mono)
+      MUST be loaded here, not via @import in index.css. An @import placed after
+      the @tailwind directives is invalid CSS and Vite silently strips it, which
+      is why none of these fonts shipped to production. See _internal L-003.
+    -->
+    <!--
+      FOUR families only, and that is a deliberate cap.
+
+      This request previously loaded eleven — the four design faces plus Inter
+      and six Noto families — which is 1,931 @font-face rules and 425,707 wire
+      bytes of RENDER-BLOCKING CSS. For scale: that is eight times the size of
+      scan4u.in's entire homepage document. PDFly serves its HTML in 0.19s, the
+      fastest first byte in the category by 2.3x, and then threw all of it away
+      waiting on this one request.
+
+      The Noto families were only ever used to display native language names in
+      the picker (हिन्दी, العربية); system fonts handle those on every platform
+      that has the script installed, and a fallback glyph is a fair trade for
+      424KB off the critical path. PDF generation does NOT depend on these —
+      clientPdfGenerator.ts fetches its own TTFs on demand at render time.
+
+      Before adding a family here, check what it costs. Four families = 977 bytes.
+    -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta property="og:title" content="PDFly — Free PDF Tools That Never Upload Your Files">
+  <meta name="twitter:title" content="PDFly — Free PDF Tools That Never Upload Your Files">
+  <meta property="og:description" content="Merge, split, compress and convert PDFs entirely in your browser. Your files are never uploaded. Free REST API for developers. No watermarks, no signup.">
+  <meta name="twitter:description" content="Merge, split, compress and convert PDFs entirely in your browser. Your files are never uploaded. Free REST API for developers. No watermarks, no signup.">
 </head>
 
   <body>

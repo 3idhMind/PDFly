@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/firebase/auth";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -12,10 +12,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Settings, BookOpen, TrendingUp, Activity, Newspaper, KeyRound,
-  FileText, LogOut, User as UserIcon, ShieldCheck,
+  BookOpen, TrendingUp, Activity, Newspaper, KeyRound,
+  LogOut, ShieldCheck,
 } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
+import type { User } from "firebase/auth";
 
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 
@@ -24,29 +24,36 @@ interface Props { user: User }
 export const ProfileMenu = ({ user }: Props) => {
   const { isAdmin } = useIsAdmin();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmStep, setConfirmStep] = useState(0);
-  const [displayName, setDisplayName] = useState<string>("");
+  const [signingOut, setSigningOut] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let cancelled = false;
-    supabase.from("profiles").select("display_name").eq("user_id", user.id).maybeSingle()
-      .then(({ data }) => { if (!cancelled && data?.display_name) setDisplayName(data.display_name); });
-    return () => { cancelled = true; };
-  }, [user.id]);
-
-  const name = displayName || user.email || "Account";
+  // Firebase carries displayName on the user object itself, so the extra
+  // round-trip to a `profiles` table this used to do is gone.
+  const name = user.displayName || user.email || "Account";
   const initials = (name || "U").slice(0, 2).toUpperCase();
 
+  /**
+   * Sign out was unreachable, and the two-step confirm was the reason.
+   *
+   * Radix's AlertDialogAction closes the dialog on click. The old handler used
+   * that same click to advance a step counter, and the dialog's onOpenChange
+   * reset the counter to 0 on close. So clicking "Continue" closed the dialog
+   * and reset the step — step 1 could never be reached and sign-out never ran.
+   * No error, no network request, nothing: exactly the reported symptom.
+   *
+   * Removed the step counter rather than patching it. Signing out is not
+   * destructive — you sign back in — and asking twice to confirm a reversible
+   * action is a dark pattern, not a safeguard.
+   */
   const handleConfirmLogout = async () => {
-    if (confirmStep < 1) {
-      setConfirmStep(confirmStep + 1);
-      return;
+    setSigningOut(true);
+    try {
+      await signOut();
+      setConfirmOpen(false);
+      navigate("/");
+    } finally {
+      setSigningOut(false);
     }
-    await supabase.auth.signOut();
-    setConfirmOpen(false);
-    setConfirmStep(0);
-    navigate("/");
   };
 
   return (
@@ -70,9 +77,13 @@ export const ProfileMenu = ({ user }: Props) => {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem asChild><Link to="/settings"><UserIcon className="w-4 h-4 mr-2" /> Profile & Settings</Link></DropdownMenuItem>
-          <DropdownMenuItem asChild><Link to="/settings#api"><KeyRound className="w-4 h-4 mr-2" /> API Keys</Link></DropdownMenuItem>
-          <DropdownMenuItem asChild><Link to="/settings#documents"><FileText className="w-4 h-4 mr-2" /> Recent Documents</Link></DropdownMenuItem>
+          {/* One entry, not three. "Profile & Settings", "API Keys" and
+              "Recent Documents" were three menu items that all opened the same
+              page — the last two only differed by a #hash. Three labels for one
+              destination reads as broken navigation, because it is. */}
+          <DropdownMenuItem asChild>
+            <Link to="/settings"><KeyRound className="w-4 h-4 mr-2" /> Settings &amp; API keys</Link>
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
@@ -97,7 +108,7 @@ export const ProfileMenu = ({ user }: Props) => {
 
           {/* Buried logout — bottom, muted, requires confirm */}
           <DropdownMenuItem
-            onSelect={(e) => { e.preventDefault(); setConfirmStep(0); setConfirmOpen(true); }}
+            onSelect={(e) => { e.preventDefault(); setConfirmOpen(true); }}
             className="text-muted-foreground/70 text-xs focus:text-destructive"
           >
             <LogOut className="w-3.5 h-3.5 mr-2 opacity-60" /> Sign out
@@ -105,22 +116,18 @@ export const ProfileMenu = ({ user }: Props) => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <AlertDialog open={confirmOpen} onOpenChange={(o) => { setConfirmOpen(o); if (!o) setConfirmStep(0); }}>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmStep === 0 ? "Are you sure you want to sign out?" : "Really sign out?"}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Sign out of PDFly?</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmStep === 0
-                ? "You'll lose access to your API keys, recent documents, and unlimited generations until you sign back in."
-                : "This is your final confirmation. Click \"Yes, sign me out\" to leave, or Cancel to stay signed in."}
+              Your API keys and usage stay exactly as they are — sign back in any time to reach them.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Stay signed in</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmLogout} className="bg-destructive hover:bg-destructive/90">
-              {confirmStep === 0 ? "Continue" : "Yes, sign me out"}
+            <AlertDialogAction onClick={handleConfirmLogout} disabled={signingOut}>
+              {signingOut ? "Signing out…" : "Sign out"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
