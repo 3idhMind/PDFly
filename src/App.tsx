@@ -39,6 +39,7 @@ const CompressPdf = lazy(() => import("./pages/CompressPdf"));
 const PdfToImages = lazy(() => import("./pages/PdfToImages"));
 const ApiPlayground = lazy(() => import("./pages/ApiPlayground"));
 const AdminSecurity = lazy(() => import("./pages/AdminSecurity"));
+const Admin = lazy(() => import("./pages/Admin"));
 const ResizeImage = lazy(() => import("./pages/ResizeImage"));
 const IdPhotoCrop = lazy(() => import("./pages/IdPhotoCrop"));
 const RotatePdf = lazy(() => import("./pages/RotatePdf"));
@@ -109,6 +110,7 @@ const App = () => (
                 <Route path="/pdf-to-images" element={<PdfToImages />} />
                 <Route path="/api-playground" element={<ApiPlayground />} />
                 <Route path="/admin/security" element={<AdminSecurity />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

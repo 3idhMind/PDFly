@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
 
 /**
- * Admin check, backed by a Firebase custom claim.
+ * Admin check, decided by the server.
  *
- * The claim can only be set with the Admin SDK — a signed-in user cannot grant
- * it to themselves, and it is carried inside the signed ID token, so the server
- * re-verifies it on every request rather than trusting anything the client says.
- * This replaces the Supabase version, which round-tripped to a `bootstrap-admin`
- * edge function and then read a `user_roles` table on every auth change.
+ * Previously this read a Firebase custom claim (`token.claims.admin`). The
+ * claim can only be set by an out-of-band Admin SDK call that nothing in this
+ * project ever performed, so in practice the value was always false and the
+ * admin UI was unreachable. The server now derives admin status from the
+ * ADMIN_EMAIL environment variable, compared against the *Firebase-verified*
+ * email inside the ID token.
  *
- * This hook only decides whether to *render* admin UI. It is not a security
- * boundary — every admin API route must verify the same claim server-side.
+ * The address itself is never sent to the browser — `/api/me` returns only a
+ * boolean. A `VITE_ADMIN_EMAIL` would have been simpler and would have shipped
+ * the owner's email address to every visitor in the bundle.
+ *
+ * This hook decides whether to *render* admin UI. It is not a security
+ * boundary: every admin API route re-verifies the same condition server-side,
+ * so forcing this to true in devtools reveals an empty shell and nothing else.
  */
 export const useIsAdmin = () => {
   const { user, loading: authLoading } = useAuth();
@@ -28,11 +35,11 @@ export const useIsAdmin = () => {
       return;
     }
 
-    user
-      .getIdTokenResult()
-      .then((token) => {
+    api
+      .me()
+      .then((data) => {
         if (cancelled) return;
-        setIsAdmin(token.claims.admin === true);
+        setIsAdmin(data.isAdmin === true);
         setLoading(false);
       })
       .catch(() => {

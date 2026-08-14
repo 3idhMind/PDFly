@@ -1,4 +1,4 @@
-import { LogIn, LogOut, Menu, X, ChevronDown } from "lucide-react";
+import { LogIn, LogOut, Menu, X, ChevronDown , KeyRound, TrendingUp} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -15,8 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Blog was reachable only by typing /blog. It is the content surface the whole
+// SEO strategy depends on, and nothing on the site linked to it from the top
+// level. `/docs` is public and stays public: API documentation behind a login
+// cannot be indexed, and a developer evaluating the API will not sign up first.
 const NAV = [
   { to: "/docs", label: "API" },
+  { to: "/blog", label: "Blog" },
   { to: "/api-playground", label: "Playground" },
   { to: "/pricing", label: "Pricing" },
 ];
@@ -162,9 +167,25 @@ export const Header = () => {
             </nav>
             <div className="p-6 border-t border-border">
               {user ? (
-                <Button variant="outline" className="w-full" onClick={() => { handleLogout(); closeMenu(); }}>
-                  <LogOut className="w-4 h-4 mr-2" /> Sign out
-                </Button>
+                /*
+                  A signed-in user on mobile previously got exactly one control
+                  here: Sign out. Settings, API keys and Analytics existed only
+                  inside the desktop ProfileMenu dropdown, which never renders at
+                  this breakpoint — so on a phone the account had no reachable
+                  account area at all, and /settings could only be reached by
+                  typing the URL. Same destinations as the desktop menu.
+                */
+                <div className="flex flex-col gap-2">
+                  <Button className="w-full h-12 rounded-full text-base font-semibold" asChild onClick={closeMenu}>
+                    <Link to="/settings"><KeyRound className="w-4 h-4 mr-2" /> Settings &amp; API</Link>
+                  </Button>
+                  <Button variant="outline" className="w-full h-11 rounded-full" asChild onClick={closeMenu}>
+                    <Link to="/analytics"><TrendingUp className="w-4 h-4 mr-2" /> Analytics</Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full h-11 text-muted-foreground" onClick={() => { handleLogout(); closeMenu(); }}>
+                    <LogOut className="w-4 h-4 mr-2" /> Sign out
+                  </Button>
+                </div>
               ) : (
                 <Button className="w-full h-12 text-base rounded-full font-semibold bg-primary text-primary-foreground hover:bg-primary/90" asChild onClick={closeMenu}>
                   <Link to="/auth"><LogIn className="w-4 h-4 mr-2" /> Sign in</Link>

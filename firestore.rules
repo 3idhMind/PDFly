@@ -111,6 +111,21 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ----------------------------------------------------------- blogPosts
+    // Document ID is the slug, which is also the public URL segment.
+    //
+    // Server-only in both directions, and read is denied on purpose even though
+    // the content is public. Posts reach visitors as prerendered static HTML
+    // built from api/blog.ts; nothing in the browser reads this collection. A
+    // client read path would exist only to be a runtime fetch on the pages that
+    // most need to be indexable, which is the exact mistake prerendering was
+    // built to prevent. Scheduled posts (publishAt in the future) also must not
+    // be enumerable before their date, and a client rule cannot express that as
+    // cheaply as the server filter already does.
+    match /blogPosts/{slug} {
+      allow read, write: if false;
+    }
+
     // ------------------------------------------------------------ feedback
     // Write-only drop box. Anyone may submit; nobody may read it back, so one
     // submitter can never enumerate everyone else's messages.

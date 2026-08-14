@@ -84,7 +84,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name,
         keyPrefix: generated.prefix,
         active: true,
-        scopes: ["pdf:generate"],
+        // `blog:write` publishes to the site's own blog, so only the admin may
+        // mint a key that carries it, and it must be asked for explicitly —
+        // never handed out by default with an ordinary developer key.
+        scopes:
+          caller.isAdmin && req.body?.scopes?.includes("blog:write")
+            ? ["pdf:generate", "blog:write"]
+            : ["pdf:generate"],
         rateLimitPerMin: DEFAULT_RATE_LIMIT_PER_MIN,
         createdAt: FieldValue.serverTimestamp(),
         lastUsedAt: null,

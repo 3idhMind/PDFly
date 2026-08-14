@@ -299,6 +299,49 @@ export const ROUTES: RouteMeta[] = [
   },
 
   // ------------------------------------- private: prerendered, not indexed
+  // Must be listed even though it is private: the SPA catch-all rewrite is
+  // gone (D-014), so a path with no prerendered file now genuinely 404s.
+  // `noindex` keeps it out of the sitemap; the entry keeps the URL reachable.
+  {
+    path: "/admin",
+    title: "Admin | PDFly",
+    description: "Feedback inbox and blog management.",
+    priority: 0.1,
+    changefreq: "monthly",
+    noindex: true,
+  },
+  {
+    path: "/admin/security",
+    title: "Admin · Security | PDFly",
+    description: "Security event log.",
+    priority: 0.1,
+    changefreq: "monthly",
+    noindex: true,
+  },
+  {
+    path: "/settings",
+    title: "Settings & API Keys | PDFly",
+    description: "Manage your account and API keys.",
+    priority: 0.1,
+    changefreq: "monthly",
+    noindex: true,
+  },
+  {
+    path: "/analytics",
+    title: "Analytics | PDFly",
+    description: "Your API usage.",
+    priority: 0.1,
+    changefreq: "monthly",
+    noindex: true,
+  },
+  {
+    path: "/reset-password",
+    title: "Reset Password | PDFly",
+    description: "Set a new password for your PDFly account.",
+    priority: 0.1,
+    changefreq: "monthly",
+    noindex: true,
+  },
   {
     path: "/auth",
     title: "Sign In — PDFly by 3idhMinds",

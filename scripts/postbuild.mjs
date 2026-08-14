@@ -51,6 +51,43 @@ const { ROUTES, SITE_ORIGIN } = await import(
  * regex that silently matches nothing would quietly drop every post from both
  * the prerender and the sitemap.
  */
+/**
+ * Posts come from Firestore via `api/blog.ts`, with the in-repo array as a
+ * fallback.
+ *
+ * The fallback is not laziness. The build must not start failing the day the
+ * API has a bad minute, and the very first deploy of this code runs before the
+ * endpoint it wants to call exists. So: try the network, and if it does not
+ * answer, prerender what is in the repo and say loudly which source was used.
+ * A build that silently drops every blog URL from the sitemap is far worse than
+ * one that prints which path it took.
+ */
+async function fetchBlogPosts() {
+  const origin = process.env.PDFLY_BLOG_ORIGIN || SITE_ORIGIN;
+  try {
+    const res = await fetch(`${origin}/api/blog`, {
+      signal: AbortSignal.timeout(15_000),
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { posts } = await res.json();
+    if (!Array.isArray(posts) || posts.length === 0) throw new Error("no posts returned");
+    console.log(`[postbuild] blog source: Firestore (${posts.length} posts via ${origin})`);
+    return posts.map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      excerpt: p.excerpt,
+      category: p.category ?? "",
+    }));
+  } catch (err) {
+    console.warn(
+      `[postbuild] blog source: src/pages/Blog.tsx fallback — ${origin}/api/blog ` +
+        `was unreachable (${err.message}). This is expected on a first deploy.`,
+    );
+    return readBlogPosts();
+  }
+}
+
 function readBlogPosts() {
   const src = readFileSync(join(root, "src/pages/Blog.tsx"), "utf8");
   const posts = [];
@@ -154,7 +191,7 @@ function writeRoute(path, html) {
 
 /* ---------------------------------------------------------------- prerender */
 
-const blogPosts = readBlogPosts();
+const blogPosts = await fetchBlogPosts();
 
 const allRoutes = [
   ...ROUTES,

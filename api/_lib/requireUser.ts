@@ -10,6 +10,12 @@ export interface Caller {
   keyDocId?: string;
   rateLimitPerMin: number;
   isAdmin: boolean;
+  /**
+   * Capability list carried by an API key. Empty for ID tokens, whose rights
+   * come from the account itself. `blog:write` is what lets a key publish to
+   * the site's own blog, so an ordinary developer key can never post content.
+   */
+  scopes: string[];
 }
 
 function bearer(req: VercelRequest): string | null {
@@ -60,6 +66,7 @@ export async function requireUser(req: VercelRequest, res: VercelResponse): Prom
       keyDocId: snap.id,
       rateLimitPerMin: (data.rateLimitPerMin as number) ?? DEFAULT_RATE_LIMIT_PER_MIN,
       isAdmin: false, // API keys never carry admin rights, regardless of owner.
+      scopes: Array.isArray(data.scopes) ? (data.scopes as string[]) : [],
     };
   }
 
@@ -71,12 +78,45 @@ export async function requireUser(req: VercelRequest, res: VercelResponse): Prom
       uid: decoded.uid,
       authType: "idToken",
       rateLimitPerMin: DEFAULT_RATE_LIMIT_PER_MIN,
-      isAdmin: decoded.admin === true,
+      // Two independent routes to admin, and the env one is the operational one.
+      //
+      // A custom claim is the "proper" Firebase mechanism, but setting it needs
+      // an out-of-band Admin SDK call that nothing in this project performs, so
+      // in practice nobody was ever an admin. ADMIN_EMAIL closes that gap
+      // without hardcoding an identity into the source: whoever the deployment
+      // names is the admin, and changing it is an env edit and a redeploy.
+      //
+      // Safe because `decoded` came out of verifyIdToken — the email is
+      // Firebase-signed, not client-supplied. Compared case-insensitively
+      // because Google normalises addresses and dashboards do not.
+      // emailVerified is required so an unverified signup on the same address
+      // can never inherit admin.
+      isAdmin: decoded.admin === true || isAdminEmail(decoded.email, decoded.email_verified),
+      scopes: [], // an ID token's rights come from the account, not a scope list
     };
   } catch {
     fail(res, 401, "INVALID_TOKEN", "Session is invalid or has expired. Sign in again.");
     return null;
   }
+}
+
+/**
+ * True when this Firebase-verified email is the deployment's admin.
+ *
+ * ADMIN_EMAIL is deliberately NOT `VITE_`-prefixed: a `VITE_` var is compiled
+ * into the browser bundle, which would publish the owner's address to every
+ * visitor. The client never learns this value — it asks `/api/me` instead.
+ *
+ * Supports a comma-separated list so a second operator can be added without a
+ * code change.
+ */
+export function isAdminEmail(email?: string, emailVerified?: boolean): boolean {
+  if (!email || emailVerified === false) return false;
+  const allowed = (process.env.ADMIN_EMAIL ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return allowed.includes(email.toLowerCase());
 }
 
 /** Convenience path to the caller's per-product document. */

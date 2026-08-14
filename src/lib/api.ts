@@ -61,6 +61,9 @@ export interface CreatedApiKey {
 }
 
 export const api = {
+  /** Identity + admin flag, decided server-side. See api/me.ts. */
+  me: () => request<{ uid: string; authType: string; isAdmin: boolean }>("/api/me"),
+
   listKeys: () => request<{ keys: ApiKeySummary[] }>("/api/keys"),
 
   createKey: (name: string) =>
@@ -71,6 +74,44 @@ export const api = {
 
   revokeKey: (keyId: string) =>
     request<{ revoked: boolean }>(`/api/keys?id=${encodeURIComponent(keyId)}`, {
+      method: "DELETE",
+    }),
+};
+
+/* ------------------------------------------------------------------ admin */
+
+export interface FeedbackEntry {
+  id: string;
+  name: string | null;
+  email: string | null;
+  message: string;
+  rating: number | null;
+  path: string | null;
+  createdAt: string | null;
+}
+
+export interface AdminPost {
+  slug: string;
+  title: string;
+  category?: string;
+  publishAt?: string;
+  status?: string;
+}
+
+/** Every one of these 403s for a non-admin caller, server-side. */
+export const admin = {
+  feedback: () => request<{ feedback: FeedbackEntry[]; count: number }>("/api/admin-feedback"),
+
+  deleteFeedback: (id: string) =>
+    request<{ deleted: string }>(`/api/admin-feedback?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+
+  // `all=1` includes drafts and future-dated posts, which the public read hides.
+  posts: () => request<{ posts: AdminPost[]; count: number }>("/api/blog?all=1"),
+
+  deletePost: (slug: string) =>
+    request<{ deleted: string }>(`/api/blog?slug=${encodeURIComponent(slug)}`, {
       method: "DELETE",
     }),
 };
