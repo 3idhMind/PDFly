@@ -138,9 +138,9 @@ const Blog = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
-        title="PDFly Blog — PDF Generation Guides, Tutorials & Tips | 3idhMind"
-        description="Learn about PDF generation, REST APIs, non-Latin script rendering, batch processing, and more. Free tutorials and guides by 3idhMind."
-        keywords="PDF generation blog, HTML to PDF tutorial, PDF API guide, Hindi PDF, Arabic PDF, invoice PDF, certificate PDF, 3idhMind blog"
+        title="PDFly Blog — PDF Generation Guides, Tutorials & Tips | 3idhMinds"
+        description="Learn about PDF generation, REST APIs, non-Latin script rendering, batch processing, and more. Free tutorials and guides by 3idhMinds."
+        keywords="PDF generation blog, HTML to PDF tutorial, PDF API guide, Hindi PDF, Arabic PDF, invoice PDF, certificate PDF, 3idhMinds blog"
         canonical={`${SITE_URL}/blog`}
       />
       <Helmet>
@@ -149,7 +149,7 @@ const Blog = () => {
           "@type": "Blog",
           name: "PDFly Blog",
           url: `${SITE_URL}/blog`,
-          description: "Guides, tutorials, and tips for PDF generation by 3idhMind.",
+          description: "Guides, tutorials, and tips for PDF generation by 3idhMinds.",
           blogPost: blogPosts.map(p => ({
             "@type": "BlogPosting",
             headline: p.title,
@@ -168,7 +168,7 @@ const Blog = () => {
             <BookOpen className="w-8 h-8 text-primary" /> PDFly Blog
           </h1>
           <p className="text-lg text-muted-foreground">
-            Guides, tutorials, and tips for PDF generation — by <Link to="/" className="text-primary hover:underline">3idhMind</Link>
+            Guides, tutorials, and tips for PDF generation — by <Link to="/" className="text-primary hover:underline">3idhMinds</Link>
           </p>
         </motion.div>
 

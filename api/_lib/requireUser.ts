@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { adminAuth, db, PRODUCT_ID, DEFAULT_RATE_LIMIT_PER_MIN } from "./firebase";
-import { hashApiKey, looksLikeApiKey } from "./apiKeys";
-import { fail } from "./http";
+import { adminAuth, db, PRODUCT_ID, DEFAULT_RATE_LIMIT_PER_MIN } from "./firebase.js";
+import { hashApiKey, looksLikeApiKey } from "./apiKeys.js";
+import { fail } from "./http.js";
 
 export interface Caller {
   uid: string;

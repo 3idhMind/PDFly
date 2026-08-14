@@ -185,9 +185,9 @@ const Status = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
-        title="System Status — PDFly by 3idhMind"
+        title="System Status — PDFly by 3idhMinds"
         description="Check the real-time status of PDFly services. Monitor API Gateway, Database, and PDF Generation uptime."
-        keywords="PDFly status, PDF API status, system uptime, 3idhMind status"
+        keywords="PDFly status, PDF API status, system uptime, 3idhMinds status"
         canonical={`${SITE_URL}/status`}
       />
       <Header />

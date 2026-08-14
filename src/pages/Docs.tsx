@@ -226,7 +226,7 @@ const Docs = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead title="PDFly API Documentation — REST API for PDF Generation | 3idhMind" description="Complete API documentation for PDFly. Generate PDFs with 15 templates, 11 page sizes, batch processing and 25+ image formats. Free REST API by 3idhMind." keywords="PDF API documentation, REST API PDF generation, PDFly API docs, HTML to PDF API, 3idhMind API" canonical={`${SITE_URL}/docs`} />
+      <SEOHead title="PDFly API Documentation — REST API for PDF Generation | 3idhMinds" description="Complete API documentation for PDFly. Generate PDFs with 15 templates, 11 page sizes, batch processing and 25+ image formats. Free REST API by 3idhMinds." keywords="PDF API documentation, REST API PDF generation, PDFly API docs, HTML to PDF API, 3idhMinds API" canonical={`${SITE_URL}/docs`} />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-5xl flex-1">
         <div className="flex gap-8 relative">

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { db, adminAuth } from "./_lib/firebase";
-import { ok, handledPreflight } from "./_lib/http";
+import { db, adminAuth } from "./_lib/firebase.js";
+import { ok, handledPreflight } from "./_lib/http.js";
 
 /**
  * Public health probe for the status page.

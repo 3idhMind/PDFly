@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { db } from "./_lib/firebase";
-import { requireUser } from "./_lib/requireUser";
-import { fail, ok, handledPreflight } from "./_lib/http";
+import { db } from "./_lib/firebase.js";
+import { requireUser } from "./_lib/requireUser.js";
+import { fail, ok, handledPreflight } from "./_lib/http.js";
 
 const LIMIT = 200;
 

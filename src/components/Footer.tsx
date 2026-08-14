@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Github } from "lucide-react";
+import { Github, Mail } from "lucide-react";
 import { TOOLS } from "@/lib/toolsList";
 
 export const Footer = () => {
@@ -43,8 +43,13 @@ export const Footer = () => {
                 <li><Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">Privacy</Link></li>
                 <li><Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">Terms</Link></li>
                 <li>
-                  <a href="https://github.com/3idhMind" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                  <a href="https://github.com/3idhMinds" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
                     <Github className="w-3.5 h-3.5" /> GitHub
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:support@3idhmind.in" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                    <Mail className="w-3.5 h-3.5" /> support@3idhmind.in
                   </a>
                 </li>
               </ul>

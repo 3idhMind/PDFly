@@ -83,6 +83,26 @@ export interface SyncOptions {
  * Never throws. A failure here must not block signing in.
  */
 export async function syncIdentity(user: User, opts: SyncOptions = {}): Promise<void> {
+  try {
+    await syncIdentityInner(user, opts);
+  } catch (err) {
+    // The docstring above promises this never throws, and sign-in genuinely must
+    // not be gated on a profile write. But swallowing silently is how the
+    // dotted-field-path bug stayed invisible for a whole release: Auth users
+    // appeared, Firestore documents did not, and nothing anywhere said why.
+    // Log the code loudly instead — permission-denied here means firestore.rules
+    // and the payload written below have drifted apart.
+    const code = (err as { code?: string })?.code ?? "unknown";
+    console.error(
+      `[identity] profile sync failed (${code}). The Auth account exists but its ` +
+        `Firestore document was not written. If this is permission-denied, the ` +
+        `payload no longer matches the hasOnly() allow-list in firestore.rules.`,
+      err,
+    );
+  }
+}
+
+async function syncIdentityInner(user: User, opts: SyncOptions): Promise<void> {
   const productId = opts.productId ?? PRODUCT_ID;
   if (!opts.force && !shouldSync(user.uid)) return;
 
@@ -100,11 +120,20 @@ export async function syncIdentity(user: User, opts: SyncOptions = {}): Promise<
 
   // Per-method timestamps: linkedAt is written once, lastUsedAt every sync, so
   // we can answer "does this user use Google, email, or both — and since when".
-  const authMethodPatch: Record<string, unknown> = {};
+  //
+  // MUST be a nested object, NOT dotted keys like `authMethods.google.linkedAt`.
+  // Dotted keys are field *paths* only in updateDoc(); setDoc() takes them
+  // literally and creates a top-level field whose name contains dots. That made
+  // request.resource.data.keys() contain "authMethods.google.linkedAt", which is
+  // not in the hasOnly() allow-list in firestore.rules, so every create was
+  // rejected with PERMISSION_DENIED — the Auth user existed and the Firestore
+  // user document silently never appeared. setDoc({merge:true}) deep-merges
+  // nested maps, so this form keeps the other provider's data intact.
+  const authMethods: Record<string, Record<string, unknown>> = {};
   for (const method of methods) {
-    authMethodPatch[`authMethods.${method}.lastUsedAt`] = serverTimestamp();
+    authMethods[method] = { lastUsedAt: serverTimestamp() };
     if (!existing?.authMethods?.[method]?.linkedAt) {
-      authMethodPatch[`authMethods.${method}.linkedAt`] = serverTimestamp();
+      authMethods[method].linkedAt = serverTimestamp();
     }
   }
 
@@ -128,7 +157,7 @@ export async function syncIdentity(user: User, opts: SyncOptions = {}): Promise<
             globalSettings: {},
           }
         : {}),
-      ...authMethodPatch,
+      authMethods,
     },
     { merge: true },
   );

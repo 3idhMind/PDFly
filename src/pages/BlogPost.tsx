@@ -815,9 +815,9 @@ const BlogPost = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
-        title={`${postMeta.title} | PDFly Blog by 3idhMind`}
+        title={`${postMeta.title} | PDFly Blog by 3idhMinds`}
         description={postMeta.excerpt}
-        keywords={postMeta.tags.join(", ") + ", PDF generation, PDFly, 3idhMind"}
+        keywords={postMeta.tags.join(", ") + ", PDF generation, PDFly, 3idhMinds"}
         canonical={`${SITE_URL}/blog/${slug}`}
         ogType="article"
       />

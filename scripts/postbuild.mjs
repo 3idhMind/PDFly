@@ -171,6 +171,32 @@ for (const route of allRoutes) {
   writeRoute(route.path, buildHtml(route));
 }
 
+/* ---------------------------------------------------------------- soft 404s */
+/**
+ * Every unknown URL used to answer HTTP 200 with the SPA shell, because
+ * vercel.json rewrote `/(.*)` to /index.html. Google calls that a soft 404 and
+ * treats those URLs as thin duplicates worth re-crawling — measured live:
+ * /this-page-does-not-exist-12345 returned 200 with a 6,319-byte body.
+ *
+ * Vercel serves `404.html` from the output root with a real 404 status for any
+ * path that matches no file, so writing it here plus dropping the catch-all
+ * rewrite is the whole fix. Every real route is prerendered to its own file
+ * above, so deep links still resolve — only genuinely unknown paths fall
+ * through. That also means a route added to App.tsx but not to routeMeta.ts now
+ * 404s, which is the correct failure: it would not have been indexable anyway.
+ */
+writeFileSync(
+  join(dist, "404.html"),
+  buildHtml({
+    path: "/404",
+    title: "Page Not Found (404) | PDFly",
+    description:
+      "That page doesn't exist. Browse PDFly's free browser-based PDF and image tools instead.",
+    noindex: true,
+  }),
+  "utf8",
+);
+
 /* ------------------------------------------------------------------ sitemap */
 
 const today = new Date().toISOString().slice(0, 10);

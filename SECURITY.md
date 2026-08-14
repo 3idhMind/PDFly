@@ -15,7 +15,7 @@ We only provide security fixes for the latest version on the `main` branch.
 
 If you discover a security vulnerability in PDFly, please report it responsibly:
 
-1. **Email**: Send details to **security@3idhmind.in**
+1. **Email**: Send details to **support@3idhmind.in**
 2. **Subject line**: `[SECURITY] PDFly — Brief description`
 3. **Include**:
    - Description of the vulnerability

@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { jsPDF } from "jspdf";
-import { fail, ok, handledPreflight } from "./_lib/http";
-import { requireUser } from "./_lib/requireUser";
-import { checkQuota, recordUsage, rateLimit, subjectOf } from "./_lib/quota";
+import { fail, ok, handledPreflight } from "./_lib/http.js";
+import { requireUser } from "./_lib/requireUser.js";
+import { checkQuota, recordUsage, rateLimit, subjectOf } from "./_lib/quota.js";
 
 /**
  * POST /api/generate-pdf — the main public endpoint: text or HTML in, PDF out.

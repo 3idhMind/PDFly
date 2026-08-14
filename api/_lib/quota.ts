@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { db, PRODUCT_ID, FREE_TIER_MONTHLY_QUOTA } from "./firebase";
-import type { Caller } from "./requireUser";
+import { db, PRODUCT_ID, FREE_TIER_MONTHLY_QUOTA } from "./firebase.js";
+import type { Caller } from "./requireUser.js";
 
 /** "2026-08" — also the document ID, so a new month resets by existing. */
 export function currentMonthId(now = new Date()): string {

@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { FieldValue } from "firebase-admin/firestore";
-import { db } from "./_lib/firebase";
-import { redact } from "./_lib/apiKeys";
-import { fail, ok, handledPreflight } from "./_lib/http";
+import { db } from "./_lib/firebase.js";
+import { redact } from "./_lib/apiKeys.js";
+import { fail, ok, handledPreflight } from "./_lib/http.js";
 
 const MAX_FIELD = 2000;
 

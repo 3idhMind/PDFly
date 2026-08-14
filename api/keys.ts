@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { FieldValue } from "firebase-admin/firestore";
-import { db, PRODUCT_ID, DEFAULT_RATE_LIMIT_PER_MIN } from "./_lib/firebase";
-import { generateApiKey } from "./_lib/apiKeys";
-import { requireUser } from "./_lib/requireUser";
-import { fail, ok, handledPreflight } from "./_lib/http";
+import { db, PRODUCT_ID, DEFAULT_RATE_LIMIT_PER_MIN } from "./_lib/firebase.js";
+import { generateApiKey } from "./_lib/apiKeys.js";
+import { requireUser } from "./_lib/requireUser.js";
+import { fail, ok, handledPreflight } from "./_lib/http.js";
 
 /** Enough for real use, low enough that a runaway script can't fill a collection. */
 const MAX_KEYS_PER_USER = 10;

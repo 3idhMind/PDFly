@@ -2,8 +2,15 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2023"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    // MUST match how Vercel actually compiles these files, not how Vite bundles
+    // the front end. `bundler` resolution was silently accepting extensionless
+    // relative imports (`./_lib/firebase`); Vercel compiles with node16/nodenext,
+    // where those are an error, and Node's ESM loader then threw
+    // ERR_MODULE_NOT_FOUND at runtime — every API endpoint 500'd in production
+    // while `npm run typecheck` passed clean locally. Keep this as nodenext so a
+    // missing `.js` extension fails here instead of on the live site.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "allowImportingTsExtensions": true,
     "moduleDetection": "force",
     "isolatedModules": true,

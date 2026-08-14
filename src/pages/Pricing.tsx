@@ -27,7 +27,7 @@ const Pricing = () => {
       <Helmet>
         <title>PDFly Pricing — Free PDF & Photo Tools, Free API</title>
         <meta name="description" content="PDFly is free — every tool, no limits, no account required. Merge, split, compress, resize photos to an exact KB, convert images to PDF, and a free REST API for developers." />
-        <meta name="keywords" content="free PDF tools, free PDF API, PDF generator pricing, compress PDF free, resize image free, PDFly pricing, 3idhMind" />
+        <meta name="keywords" content="free PDF tools, free PDF API, PDF generator pricing, compress PDF free, resize image free, PDFly pricing, 3idhMinds" />
         <meta property="og:title" content="PDFly Pricing — Free PDF & Photo Tools, Free API" />
         <meta property="og:description" content="Every PDF and photo tool, free, no account needed. Files never leave your browser. Free REST API for developers too." />
         <meta property="og:type" content="website" />
@@ -38,7 +38,7 @@ const Pricing = () => {
           "@type": "Product",
           name: "PDFly",
           description: "Browser-based PDF and photo tools, plus a REST API for developers — files never leave your device",
-          brand: { "@type": "Brand", name: "3idhMind" },
+          brand: { "@type": "Brand", name: "3idhMinds" },
           offers: {
             "@type": "Offer",
             name: "Free",
