@@ -8,5 +8,12 @@
     }
   ],
   "trailingSlash": false,
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/me", "destination": "/api/account?action=me" },
+    { "source": "/api/admin-feedback", "destination": "/api/account?action=feedback" },
+    { "source": "/api/admin-events", "destination": "/api/account?action=events" },
+    { "source": "/api/health", "destination": "/api/system" },
+    { "source": "/api/report-issue", "destination": "/api/system" }
+  ]
 }
