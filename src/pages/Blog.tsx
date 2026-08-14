@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { Calendar, Clock, ArrowRight, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SITE_URL } from "@/lib/config";
+import { blogCover } from "@/lib/blogCover";
 
 export interface BlogPostMeta {
   slug: string;
@@ -27,7 +28,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Learn how to convert any image to PDF using PDFly. Supports 100+ images, 25+ formats including HEIC, WebP, RAW. Free, fast, client-side processing.",
     date: "2026-03-28", readTime: "8 min",
     tags: ["Image to PDF", "Free", "Tutorial"],
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800&h=400&fit=crop",
   },
   {
     slug: "top-10-free-pdf-tools-developers-2026",
@@ -35,7 +35,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "A curated list of the best free PDF tools for developers — generators, converters, APIs, and utilities that save hours of work.",
     date: "2026-03-25", readTime: "10 min",
     tags: ["Tools", "Listicle", "2026"],
-    image: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=800&h=400&fit=crop",
   },
   {
     slug: "pdf-generation-pipeline-pdfly-api",
@@ -43,7 +42,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Step-by-step technical tutorial on building an automated PDF pipeline — from data collection to generation to delivery. JavaScript, Python examples.",
     date: "2026-03-22", readTime: "14 min",
     tags: ["Pipeline", "Automation", "Tutorial"],
-    image: "https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=800&h=400&fit=crop",
   },
   {
     slug: "pdfly-vs-adobe-smallpdf-comparison",
@@ -51,7 +49,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Honest comparison of PDFly, Adobe Acrobat, and SmallPDF. Features, pricing, API access, privacy, and developer experience compared.",
     date: "2026-03-19", readTime: "11 min",
     tags: ["Comparison", "Adobe", "SmallPDF"],
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop",
   },
   {
     slug: "html-to-pdf-api-guide",
@@ -59,7 +56,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Learn how to generate professional PDFs from HTML content using PDFly's free REST API. Includes code examples in JavaScript, Python, PHP, and Go.",
     date: "2026-03-08", readTime: "12 min",
     tags: ["API", "Tutorial", "HTML to PDF"],
-    image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&h=400&fit=crop",
   },
   {
     slug: "multi-language-pdf-generation",
@@ -67,7 +63,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Most PDF generators break on non-Latin scripts. The PDFly browser tool loads the right Noto font for Devanagari, Arabic and Simplified Chinese automatically. An honest look at what works and what doesn't yet.",
     date: "2026-03-07", readTime: "10 min",
     tags: ["Scripts", "Hindi", "Arabic", "Fonts"],
-    image: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=800&h=400&fit=crop",
   },
   {
     slug: "batch-pdf-generation-api",
@@ -75,7 +70,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Learn how to generate multiple PDFs simultaneously using PDFly's batch API. Perfect for invoices, certificates, reports.",
     date: "2026-03-06", readTime: "8 min",
     tags: ["API", "Batch", "Performance"],
-    image: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800&h=400&fit=crop",
   },
   {
     slug: "pdf-templates-guide",
@@ -83,7 +77,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "PDFly offers 15 professionally designed templates. Here's a detailed guide to each one and when to use them.",
     date: "2026-03-05", readTime: "9 min",
     tags: ["Templates", "Design", "Guide"],
-    image: "https://images.unsplash.com/photo-1542621334-a254cf47733d?w=800&h=400&fit=crop",
   },
   {
     slug: "free-pdf-api-developers",
@@ -91,7 +84,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "PDFly offers a completely free REST API for PDF generation. Get API keys, generate PDFs programmatically, build document workflows at zero cost.",
     date: "2026-03-04", readTime: "7 min",
     tags: ["Free", "API", "Developers"],
-    image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&h=400&fit=crop",
   },
   {
     slug: "invoice-pdf-generation-tutorial",
@@ -99,7 +91,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Automate invoice generation with PDFly. Create professional invoices with custom templates and batch processing for billing systems.",
     date: "2026-03-03", readTime: "11 min",
     tags: ["Invoice", "Automation", "Tutorial"],
-    image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop",
   },
   {
     slug: "pdf-api-vs-puppeteer-wkhtmltopdf",
@@ -107,7 +98,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "A comprehensive comparison of popular PDF generation methods. When to use each, pros and cons, performance benchmarks, and cost analysis.",
     date: "2026-03-02", readTime: "13 min",
     tags: ["Comparison", "Puppeteer", "wkhtmltopdf"],
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop",
   },
   {
     slug: "pdf-generation-for-saas",
@@ -115,7 +105,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Step-by-step guide to integrating PDF export functionality into your SaaS application using PDFly's REST API. React, Vue, and Node.js examples included.",
     date: "2026-03-01", readTime: "14 min",
     tags: ["SaaS", "Integration", "Guide"],
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop",
   },
   {
     slug: "rtl-pdf-generation-arabic-hebrew",
@@ -123,7 +112,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Arabic and Urdu need more than flipped text: shaping, ligatures, and the bidi algorithm. Here's the real problem, and exactly how far PDFly gets today.",
     date: "2026-02-28", readTime: "8 min",
     tags: ["RTL", "Arabic", "Urdu", "Fonts"],
-    image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&h=400&fit=crop",
   },
   {
     slug: "certificate-pdf-generation-bulk",
@@ -131,7 +119,6 @@ export const blogPosts: BlogPostMeta[] = [
     excerpt: "Create hundreds of personalized certificates in minutes. Perfect for online courses, events, workshops. Use templates or design custom layouts.",
     date: "2026-02-27", readTime: "9 min",
     tags: ["Certificates", "Bulk", "Education"],
-    image: "https://images.unsplash.com/photo-1523050854058-8df90110c476?w=800&h=400&fit=crop",
   },
 ];
 const Blog = () => {
@@ -176,11 +163,14 @@ const Blog = () => {
           {blogPosts.map((post, i) => (
             <motion.div key={post.slug} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card className="overflow-hidden glass hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
-                {post.image && (
-                  <Link to={`/blog/${post.slug}`}>
-                    <img src={post.image} alt={post.title} className="w-full h-48 object-cover" loading="lazy" />
-                  </Link>
-                )}
+                <Link to={`/blog/${post.slug}`}>
+                  <img
+                    src={blogCover(post.slug)}
+                    alt=""
+                    aria-hidden="true"
+                    className="w-full h-48 object-cover"
+                  />
+                </Link>
                 <div className="p-6">
                   <div className="flex flex-wrap gap-2 mb-3">
                     {post.tags.map((tag) => (

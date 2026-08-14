@@ -1,0 +1,24 @@
+{
+  // Compiles api/ the way Vercel does, so scripts/smoke-api.mjs can load the
+  // emitted JavaScript instead of the TypeScript source.
+  //
+  // This exists because `tsc --noEmit` proves the code type-checks and proves
+  // nothing about whether it will load. Two production outages in a row were
+  // module-resolution failures that a type-check cannot see:
+  //   ERR_MODULE_NOT_FOUND  (missing .js extensions)
+  //   ERR_REQUIRE_ESM       (jwks-rsa require()ing an ESM-only jose)
+  // Both only appear when Node actually loads the emitted files.
+  "extends": "./tsconfig.api.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".smoke",
+    // Without this tsc infers the common root as `api/` and emits flat, which
+    // loses the api/_lib split the smoke runner uses to tell functions from
+    // shared modules — the same underscore rule Vercel applies.
+    "rootDir": ".",
+    // Requires noEmit, so it has to go when we emit. Only the test file used it.
+    "allowImportingTsExtensions": false
+  },
+  "include": ["api"],
+  "exclude": ["api/**/*.test.ts"]
+}
