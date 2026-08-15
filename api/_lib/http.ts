@@ -35,3 +35,32 @@ export function handledPreflight(req: VercelRequest, res: VercelResponse): boole
   }
   return false;
 }
+
+/**
+ * The operation a namespaced request is asking for, e.g. "basic/merge".
+ *
+ * ── Why this is a query parameter and not a path segment ──────────────────
+ * The first attempt used Vercel's `[...path]` catch-all files
+ * (`api/pdf/[...path].ts`). Measured on production, it did not behave as
+ * assumed: `/api/pdf/generate` reached the function with `req.query.path`
+ * EMPTY, and `/api/pdf/basic/merge` never reached it at all — the platform
+ * answered its own 404. Every account and PDF endpoint was dead while
+ * `/api/system`, an ordinary file, was fine.
+ *
+ * So the routing no longer depends on catch-all semantics. Plain files, and
+ * vercel.json rewrites the pretty URL into `?op=`:
+ *
+ *     /api/pdf/basic/merge  ->  /api/pdf?op=basic/merge
+ *
+ * Rewrites with a `:param*` capture are ordinary, documented behaviour, and
+ * `scripts/route-test.mjs` resolves the real vercel.json with the same
+ * path-to-regexp Vercel uses, so a routing mistake now fails locally.
+ *
+ * Accepts an array too: if a segment ever arrives pre-split, joining it back
+ * costs nothing and removes a whole class of "worked in one place" bug.
+ */
+export function operationFrom(req: VercelRequest): string {
+  const raw = req.query.op ?? req.query.path;
+  const joined = Array.isArray(raw) ? raw.join("/") : String(raw ?? "");
+  return joined.replace(/^\/+|\/+$/g, "");
+}

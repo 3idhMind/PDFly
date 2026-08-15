@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireUser } from "../_lib/requireUser.js";
-import { fail, ok, handledPreflight } from "../_lib/http.js";
+import { requireUser } from "./_lib/requireUser.js";
+import { fail, ok, handledPreflight, operationFrom } from "./_lib/http.js";
 
 /**
  * The caller's own account.
@@ -23,11 +23,10 @@ type Handler = (req: VercelRequest, res: VercelResponse) => Promise<unknown> | u
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handledPreflight(req, res)) return;
 
-  const raw = req.query.path;
-  const key = (Array.isArray(raw) ? raw.join("/") : String(raw ?? "")).replace(/^\/+|\/+$/g, "");
+  const key = operationFrom(req);
 
   if (key === "keys") {
-    const mod = await import("../_lib/handlers/keys.js");
+    const mod = await import("./_lib/handlers/keys.js");
     return (mod.default as Handler)(req, res);
   }
 

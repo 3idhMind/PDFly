@@ -3,6 +3,7 @@ import { jsPDF } from "jspdf";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
+import { persistIfPossible } from "../storage.js";
 
 /**
  * POST /api/generate-pdf — the main public endpoint: text or HTML in, PDF out.
@@ -702,6 +703,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       language: string;
       page_size: string;
       pdf_base64: string;
+      download_url?: string;
+      expires_at?: string | null;
       complexity_score: number;
     }> = [];
 
@@ -739,6 +742,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // is also why the practical batch size is far below the 20MB cap here:
       // base64 adds a third, and the platform caps a serverless response well
       // under that. A signed link removes both constraints.
+      /*
+       * Uploaded when a bucket is configured, and the file is returned inline
+       * either way. Storage is a backup that adds a retrievable link, never a
+       * substitute for the response body — so a bucket outage costs the caller
+       * a download link, not their document.
+       */
+      const disclosure = await persistIfPossible(
+        caller.uid,
+        `${safeTitle}.pdf`,
+        pdfBytes,
+        "application/pdf",
+      );
+
       resultDocs.push({
         document_id: docId,
         title: `${safeTitle}.pdf`,
@@ -748,6 +764,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         page_size: finalPageSize,
         pdf_base64: Buffer.from(pdfBytes).toString("base64"),
         complexity_score: docScores[di].score,
+        ...(disclosure.download_url
+          ? { download_url: disclosure.download_url, expires_at: disclosure.expires_at }
+          : {}),
       });
     }
 

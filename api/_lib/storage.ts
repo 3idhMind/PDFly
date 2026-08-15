@@ -8,25 +8,29 @@
  * it, so adding a second provider later means writing one adapter and changing
  * nothing else.
  *
- * Provider order from that plan, unchanged:
- *   1. filen.io — still an open question. Its client-side encryption may make a
- *      public, time-limited link impossible without handing over the master
- *      key. That answer decides everything downstream, and it has not been
- *      answered yet, so no adapter is written for it.
- *   2. Mega.nz
- *   3. Backblaze B2 (S3-compatible)
- *   4. serving straight from the function response  <-- what runs today
+ * Provider order from that plan:
+ *   1. filen.io — researched, not chosen. Its public links do work for a
+ *      recipient with no account and do support expiry, so the original open
+ *      question is answered. The blocker is different: end-to-end encryption
+ *      means a server uploading on a user's behalf must hold the account master
+ *      key in an environment variable, which is a far larger secret to guard
+ *      than a bucket credential that can be scoped and rotated. See D-023.
+ *   2. Mega.nz — same objection, same shape.
+ *   3. Backblaze B2 (S3-compatible)  <-- IMPLEMENTED, see s3Adapter.ts
+ *   4. serving straight from the function response  <-- the fallback
  *
- * ── What is live right now ────────────────────────────────────────────────
- * Option 4. `none` is a real provider, not a stub that throws: the API works
- * without object storage, files come back inline in the response, and nothing
- * is retained. That is a deliberate behaviour with a documented contract, not a
- * broken state waiting to be fixed.
+ * Because B2, Cloudflare R2 and AWS S3 all speak the S3 API, one adapter covers
+ * all three and switching provider is an endpoint change, not a code change.
+ * That satisfies the plan's requirement that "R2 later must mean writing one
+ * new adapter, nothing else" — it turns out to mean writing none.
  *
- * Wiring an adapter is: implement StorageProvider, add one line to resolve(),
- * fill the STORAGE_* variables. Handlers do not change, because they never talk
- * to a provider directly — they call describeStorage() and report what it says.
+ * ── Behaviour without credentials ─────────────────────────────────────────
+ * `inlineOnly` is a real provider, not a stub that throws. The API works with
+ * no bucket at all: files come back inline and nothing is retained. That is a
+ * documented contract, not a broken state.
  */
+
+import { createS3Provider } from "./s3Adapter.js";
 
 /** Seconds a generated file stays retrievable once storage is attached. */
 export const RETENTION_SECONDS = Number(process.env.STORAGE_URL_TTL_SECONDS ?? 3600);
@@ -95,17 +99,33 @@ export function storage(): StorageProvider {
     return cached;
   }
 
-  // TODO(stage-3): return the S3-compatible adapter (Backblaze B2) here once
-  // the filen.io question is settled. Until an adapter exists, configured
-  // credentials must not change behaviour — silently claiming persistence we
-  // cannot deliver is worse than not having it.
-  cached = inlineOnly;
+  const endpoint = process.env.STORAGE_ENDPOINT?.trim();
+  if (!endpoint) {
+    // An endpoint is not optional for B2 or R2, and guessing one would produce
+    // uploads that fail at request time instead of a clear "not configured".
+    console.warn("[storage] STORAGE_ENDPOINT is unset — staying on inline responses.");
+    cached = inlineOnly;
+    return cached;
+  }
+
+  cached = createS3Provider(
+    {
+      bucket,
+      accessKeyId: accessKey,
+      secretAccessKey: secret,
+      endpoint,
+      region: process.env.STORAGE_REGION?.trim() || "auto",
+    },
+    RETENTION_SECONDS,
+  );
   return cached;
 }
 
 export interface StorageDisclosure {
   /** Whether this file can be retrieved again after the response. */
   persisted: boolean;
+  /** Present only when the file was actually stored. */
+  download_url?: string;
   /** ISO timestamp the file stops being retrievable, or null when inline. */
   expires_at: string | null;
   retention_seconds: number | null;
@@ -145,5 +165,50 @@ export function describeStorage(): StorageDisclosure {
     message:
       `Your file is ready and has been securely stored for the next ${hours} hour${hours === 1 ? "" : "s"}. ` +
       "You can download it again from your account until it expires, after which it is permanently deleted.",
+  };
+}
+
+/**
+ * Store a generated file, if storage is configured, and describe the outcome.
+ *
+ * The file is ALWAYS returned inline by the caller regardless — storage is a
+ * backup that adds a retrievable link, never a replacement for the response
+ * body. That ordering matters: a caller whose upload silently failed still has
+ * their document, and the disclosure simply reverts to "download it now".
+ *
+ * Keys are namespaced per account and per day so a retention sweep can delete
+ * by prefix, and so one user's objects are never guessable from another's.
+ */
+export async function persistIfPossible(
+  uid: string,
+  filename: string,
+  bytes: Uint8Array,
+  contentType = "application/pdf",
+): Promise<StorageDisclosure> {
+  const provider = storage();
+  if (!provider.persists) return describeStorage();
+
+  const day = new Date().toISOString().slice(0, 10);
+  const rand = Math.random().toString(36).slice(2, 10);
+  const key = `${uid}/${day}/${rand}-${filename.replace(/[^\w.-]/g, "_")}`;
+
+  const stored = await provider.upload(key, bytes, contentType);
+  if (!stored) {
+    // Upload failed. Tell the truth rather than promising a link that 404s.
+    return { ...describeStorage(), persisted: false, expires_at: null, retention_seconds: null,
+      message:
+        "Your file is ready. Please download it now. Backup storage was unavailable for this " +
+        "request, so the file is delivered with this response only and cannot be retrieved again." };
+  }
+
+  return {
+    persisted: true,
+    expires_at: stored.expiresAt,
+    retention_seconds: RETENTION_SECONDS,
+    download_url: stored.url,
+    message:
+      `Your file is ready and has been securely stored for the next ${Math.round(RETENTION_SECONDS / 3600)} hour` +
+      `${Math.round(RETENTION_SECONDS / 3600) === 1 ? "" : "s"}. You can download it again from the link above ` +
+      "until it expires, after which it is permanently deleted.",
   };
 }

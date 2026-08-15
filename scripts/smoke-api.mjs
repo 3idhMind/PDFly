@@ -126,7 +126,7 @@ function mockRes() {
  * actually loaded. Keep in step with the ROUTES tables in the routers.
  */
 const ROUTE_MATRIX = {
-  "pdf/[...path]": [
+  pdf: [
     ["generate"],
     ["basic", "merge"],
     ["basic", "split"],
@@ -136,8 +136,8 @@ const ROUTE_MATRIX = {
     ["convert", "from-images"],
     ["fallback"],
   ],
-  "account/[...path]": [["me"], ["keys"]],
-  "admin/[...path]": [["feedback"], ["events"], ["activity"], ["blog"]],
+  account: [["me"], ["keys"]],
+  admin: [["feedback"], ["events"], ["activity"], ["blog"]],
 };
 
 let failed = 0;
@@ -171,7 +171,7 @@ for (const file of functions) {
   // driven explicitly.
   for (const segs of ROUTE_MATRIX[name] ?? [[]]) {
     const res = mockRes();
-    const req = { method: "GET", query: { path: segs }, headers: {}, body: {} };
+    const req = { method: "GET", query: { op: segs.join("/") }, headers: {}, body: {} };
     const label = segs.length ? `${name}/${segs.join("/")}` : name;
     try {
       await mod.default(req, res);

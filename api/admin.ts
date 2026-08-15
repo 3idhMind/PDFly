@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { db } from "../_lib/firebase.js";
-import { requireUser, isAdminAccount } from "../_lib/requireUser.js";
-import { fail, ok, handledPreflight } from "../_lib/http.js";
+import { db } from "./_lib/firebase.js";
+import { requireUser, isAdminAccount } from "./_lib/requireUser.js";
+import { fail, ok, handledPreflight, operationFrom } from "./_lib/http.js";
 
 /**
  * Admin-only reads.
@@ -26,8 +26,7 @@ const iso = (v: unknown) => (v as { toDate?: () => Date })?.toDate?.()?.toISOStr
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handledPreflight(req, res)) return;
 
-  const raw = req.query.path;
-  const key = (Array.isArray(raw) ? raw.join("/") : String(raw ?? "")).replace(/^\/+|\/+$/g, "");
+  const key = operationFrom(req);
 
   const caller = await requireUser(req, res);
   if (!caller) return;
@@ -155,7 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   /* ------------------------------------------------------------------ blog */
   if (key === "blog") {
-    const mod = await import("../_lib/handlers/blogHandler.js");
+    const mod = await import("./_lib/handlers/blogHandler.js");
     return (mod.default as (q: VercelRequest, s: VercelResponse) => Promise<unknown>)(req, res);
   }
 

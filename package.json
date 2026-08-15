@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.api.json",
     "test": "node api/_lib/apiKeys.test.ts",
     "smoke": "node --no-experimental-require-module scripts/smoke-api.mjs",
-    "verify": "npm run typecheck && npm test && npm run smoke && npm run build"
+    "verify": "npm run typecheck && npm test && npm run test:storage && npm run smoke && npm run routes && npm run build",
+    "routes": "node --no-experimental-require-module scripts/route-test.mjs",
+    "test:storage": "node scripts/storage-test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

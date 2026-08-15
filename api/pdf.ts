@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { fail, handledPreflight } from "../_lib/http.js";
-import { describeStorage } from "../_lib/storage.js";
+import { fail, handledPreflight, operationFrom } from "./_lib/http.js";
+import { describeStorage } from "./_lib/storage.js";
 
 /**
  * Every PDF operation, behind one namespace.
@@ -38,20 +38,20 @@ import { describeStorage } from "../_lib/storage.js";
 
 /** Route key -> module under _lib/handlers. Adding an operation is one line. */
 const ROUTES: Record<string, () => Promise<{ default: unknown }>> = {
-  "generate": () => import("../_lib/handlers/generate.js"),
-  "basic/merge": () => import("../_lib/handlers/merge.js"),
-  "basic/split": () => import("../_lib/handlers/split.js"),
-  "optimize/compress": () => import("../_lib/handlers/compress.js"),
+  "generate": () => import("./_lib/handlers/generate.js"),
+  "basic/merge": () => import("./_lib/handlers/merge.js"),
+  "basic/split": () => import("./_lib/handlers/split.js"),
+  "optimize/compress": () => import("./_lib/handlers/compress.js"),
   // Named for what it does. Tested against a real two-page PDF: it returns
   // `page_1.pdf`, `page_2.pdf` — one single-page PDF each, `output_format:
   // "pdf-per-page"`. It does not rasterise, because there is no canvas in the
   // Node runtime; the browser tool at /pdf-to-images does that with pdf.js.
   // `to-images` stays as an alias so existing callers keep working, but the
   // documented name is the one that does not promise a PNG.
-  "convert/to-pages": () => import("../_lib/handlers/toImages.js"),
-  "convert/to-images": () => import("../_lib/handlers/toImages.js"),
-  "convert/from-images": () => import("../_lib/handlers/fromImages.js"),
-  "fallback": () => import("../_lib/handlers/fallback.js"),
+  "convert/to-pages": () => import("./_lib/handlers/toImages.js"),
+  "convert/to-images": () => import("./_lib/handlers/toImages.js"),
+  "convert/from-images": () => import("./_lib/handlers/fromImages.js"),
+  "fallback": () => import("./_lib/handlers/fallback.js"),
 };
 
 type Handler = (req: VercelRequest, res: VercelResponse) => Promise<unknown> | unknown;
@@ -59,9 +59,7 @@ type Handler = (req: VercelRequest, res: VercelResponse) => Promise<unknown> | u
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (handledPreflight(req, res)) return;
 
-  // Vercel gives the catch-all as an array of segments.
-  const raw = req.query.path;
-  const key = (Array.isArray(raw) ? raw.join("/") : String(raw ?? "")).replace(/^\/+|\/+$/g, "");
+  const key = operationFrom(req);
 
   const load = ROUTES[key];
   if (!load) {
