@@ -6,147 +6,251 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  CheckCircle, ArrowRight, Globe, Code, Layers, Palette, ImagePlus, Shield, Minimize2, Crop,
-} from "lucide-react";
+import { TOOLS } from "@/lib/toolsList";
+import { Check, ArrowRight, Shield, Zap, Info, Minus } from "lucide-react";
 
 /**
- * Rewritten. The previous version listed a "Pro" tier with password
- * protection, webhooks, white-label output, team accounts and custom fonts —
- * none of which exist in PRD.md, ROADMAP.md, or anywhere the founder has
- * actually scoped work. That's the exact thing the founder's standing rule
- * ("never fake anything, don't add scope nobody asked for") exists to catch.
- * Pro is genuinely undecided — say so, don't invent a feature list to fill
- * the space. Also dropped "limited time" framing on the free tier: there is
- * no time limit and no plan to add one; implying urgency where none exists
- * is the same category of problem as a fake feature list.
+ * Pricing.
+ *
+ * ── The rule this page keeps breaking, and why ────────────────────────────
+ * An earlier version advertised a "Pro" tier with password protection,
+ * webhooks, white-label output, team accounts and custom fonts. None of it
+ * existed in any planning document. A pricing page is where a fabricated
+ * feature list does the most damage, because it is the page a person reads
+ * immediately before deciding whether to trust the product with a document.
+ *
+ * So: everything below is either shipped and verifiable, or explicitly marked
+ * as not built. No "coming soon" on anything without a decision behind it, and
+ * no invented limits.
+ *
+ * ── Numbers ───────────────────────────────────────────────────────────────
+ * The API quota and rate limit are the real defaults from api/_lib/quota.ts
+ * (PDFLY_FREE_TIER_MONTHLY_QUOTA, PDFLY_RATE_LIMIT_PER_MIN). The ~3 MB
+ * response ceiling is Vercel's body cap, not a policy choice, and it is stated
+ * as a limitation rather than hidden.
  */
-const Pricing = () => {
+
+const FREE_TIER_QUOTA = 100;
+const RATE_LIMIT_PER_MIN = 60;
+
+const browserIncludes = [
+  "Every tool, with no account required",
+  "No file size limit and no daily cap",
+  "Files never leave your device, so nothing is uploaded",
+  "No watermark on any output",
+  "Works offline once the page has loaded",
+];
+
+const apiIncludes = [
+  `${FREE_TIER_QUOTA} documents per month`,
+  `${RATE_LIMIT_PER_MIN} requests per minute`,
+  "Generate, merge, split, compress and convert",
+  "Up to 10 API keys, revocable at any time",
+  "No credit card, ever, on the free tier",
+];
+
+const apiLimits = [
+  "Responses are capped near 3 MB, so very large batches fail",
+  "Generated files are returned inline and are not stored",
+  "Latin scripts only; the browser tools handle Hindi, Arabic and Chinese",
+];
+
+export default function Pricing() {
+  const canonical = `${SITE_URL}/pricing`;
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <Helmet>
-        <title>PDFly Pricing — Free PDF & Photo Tools, Free API</title>
-        <meta name="description" content="PDFly is free — every tool, no limits, no account required. Merge, split, compress, resize photos to an exact KB, convert images to PDF, and a free REST API for developers." />
-        <meta name="keywords" content="free PDF tools, free PDF API, PDF generator pricing, compress PDF free, resize image free, PDFly pricing, 3idhMinds" />
-        <meta property="og:title" content="PDFly Pricing — Free PDF & Photo Tools, Free API" />
-        <meta property="og:description" content="Every PDF and photo tool, free, no account needed. Files never leave your browser. Free REST API for developers too." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${SITE_URL}/pricing`} />
-        <link rel="canonical" href={`${SITE_URL}/pricing`} />
-        <script type="application/ld+json">{JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Product",
-          name: "PDFly",
-          description: "Browser-based PDF and photo tools, plus a REST API for developers — files never leave your device",
-          brand: { "@type": "Brand", name: "3idhMinds" },
-          offers: {
-            "@type": "Offer",
-            name: "Free",
-            price: "0",
-            priceCurrency: "INR",
-            availability: "https://schema.org/InStock",
-          },
-        })}</script>
+        <title>Pricing — Free PDF Tools and a Free API Tier | PDFly</title>
+        <meta
+          name="description"
+          content="Every PDFly browser tool is free with no account, no watermark and no limits. The REST API has a free tier of 100 documents a month. No paid plan exists yet."
+        />
+        <link rel="canonical" href={canonical} />
       </Helmet>
 
       <Header />
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="py-14 md:py-24 relative overflow-hidden">
-          <div className="absolute inset-0 dot-pattern opacity-40" />
-          <div className="container mx-auto px-4 max-w-5xl text-center relative">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <h1 className="text-3xl md:text-6xl font-extrabold font-display text-foreground mb-4">Free. All of it.</h1>
-              <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-                Every tool on PDFly is free, with no account required to use them and no watermark on the output. An account only exists if you want a REST API key.
+        {/* ------------------------------------------------------------ hero */}
+        <section className="border-b border-border">
+          <div className="container mx-auto max-w-5xl px-5 py-16 text-center sm:py-20">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
+                Free, and honest about it
+              </h1>
+              <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
+                The browser tools cost nothing and need no account. The API has a free tier.
+                There is no paid plan, because we have not built one.
               </p>
             </motion.div>
           </div>
         </section>
 
-        {/* What's included */}
-        <section className="pb-16 md:pb-20">
-          <div className="container mx-auto px-4 max-w-2xl">
-            <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <Card className="p-6 md:p-8 border-2 border-primary relative overflow-hidden glass premium-card">
-                <h2 className="text-2xl font-bold font-display text-foreground mb-1">Free — no plan to change that</h2>
-                <p className="text-4xl font-extrabold font-display text-foreground mb-1">₹0</p>
-                <p className="text-sm text-muted-foreground mb-6">Every tool, unlimited use, no watermark</p>
-                <ul className="space-y-3">
-                  {[
-                    "Merge, split, rotate, delete pages, reorder pages",
-                    "Compress a PDF to an exact size — presets or custom target",
-                    "Resize a photo or signature to an exact KB size",
-                    "Crop a photo to Aadhaar/PAN/Voter ID PVC dimensions",
-                    "Image to PDF (100+ images, 25+ formats) and PDF to Images",
-                    "Text/HTML to PDF — 15 templates, 11 page sizes",
-                    "Files never leave your device — every web tool runs in your browser",
-                    "No account needed for any web tool",
-                    "Free REST API for developers (sign in with Google for a key)",
-                  ].map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-foreground">
-                      <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" /> {f}
+        {/* ----------------------------------------------------------- tiers */}
+        <section className="container mx-auto max-w-5xl px-5 py-14">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Browser tools */}
+            <Card className="flex flex-col p-7">
+              <div className="mb-1 flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Browser tools
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-foreground">Free</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                No account, no limits, nothing uploaded.
+              </p>
+
+              <ul className="mt-6 flex-1 space-y-3">
+                {browserIncludes.map((item) => (
+                  <li key={item} className="flex gap-3 text-sm">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span className="text-muted-foreground">{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button asChild size="lg" className="mt-7 h-12 rounded-full">
+                <Link to="/create">
+                  Open the tools <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </Card>
+
+            {/* API */}
+            <Card className="flex flex-col border-primary/30 p-7">
+              <div className="mb-1 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  REST API
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-foreground">
+                Free tier
+                <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
+                  no card required
+                </span>
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                For scripts, servers and automation.
+              </p>
+
+              <ul className="mt-6 space-y-3">
+                {apiIncludes.map((item) => (
+                  <li key={item} className="flex gap-3 text-sm">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span className="text-muted-foreground">{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Stated on the page itself, not buried in the docs. */}
+              <div className="mt-6 rounded-lg border border-border bg-muted/40 p-4">
+                <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Info className="h-3.5 w-3.5" /> Current limitations
+                </p>
+                <ul className="space-y-2">
+                  {apiLimits.map((item) => (
+                    <li key={item} className="flex gap-2 text-sm">
+                      <Minus className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                      <span className="text-muted-foreground">{item}</span>
                     </li>
                   ))}
                 </ul>
-                <Button className="w-full mt-8 shadow-md btn-gradient-sweep bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%]" size="lg" asChild>
-                  <Link to="/create">Use a Tool — Free <ArrowRight className="w-4 h-4 ml-2" /></Link>
-                </Button>
-              </Card>
-            </motion.div>
+              </div>
 
-            {/* Honest, not a feature list dressed as a plan */}
-            <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="mt-6">
-              <Card className="p-6 border border-dashed border-border bg-muted/30">
-                <h3 className="font-semibold font-display text-foreground mb-1.5">Higher API limits — later, for developers</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  A paid tier is on the roadmap for developers who need a higher rate limit or monthly quota than the free API provides. It isn't built yet and we haven't decided what's in it — we'd rather say that plainly than list features we haven't committed to. The web tools stay free either way; a paid tier, if it happens, is about API limits only.
-                </p>
-              </Card>
-            </motion.div>
+              <Button asChild variant="outline" size="lg" className="mt-6 h-12 rounded-full">
+                <Link to="/docs">
+                  Read the API docs <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </Card>
           </div>
+
+          {/* ------------------------------------------------------ no paid tier */}
+          <Card className="mt-6 border-dashed p-7">
+            <h2 className="text-lg font-semibold text-foreground">Is there a paid plan?</h2>
+            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+              Not yet, and we would rather say that than show an empty tier with invented
+              features. If usage grows past what the free tier can carry, a paid plan will
+              exist and will be priced in the open. Nothing that is free today becomes paid
+              retroactively.
+            </p>
+          </Card>
         </section>
 
-        {/* Why free */}
-        <section className="py-16 relative">
-          <div className="container mx-auto px-4 max-w-5xl relative">
-            <h2 className="text-2xl font-bold font-display text-foreground text-center mb-10">What's actually free</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[
-                { icon: Globe, title: "Private by Default", desc: "Web tools run entirely in your browser — your files are never uploaded" },
-                { icon: Minimize2, title: "Exact-size compression", desc: "PDF and photo compression that hits a KB target, not just \"smaller\"" },
-                { icon: Crop, title: "ID Photo Crop", desc: "Aadhaar, PAN and Voter ID dimensions for PVC printing, at 600 DPI" },
-                { icon: ImagePlus, title: "Image to PDF", desc: "Convert 100+ images in 25+ formats into a single PDF" },
-                { icon: Palette, title: "15 Templates", desc: "Professional, creative, minimal, dark, academic, and more" },
-                { icon: Code, title: "REST API", desc: "Free API with code examples in JavaScript, Python, PHP, Go" },
-                { icon: Layers, title: "Batch Processing", desc: "Generate up to 5 PDFs in one API call" },
-                { icon: Shield, title: "Secure by design", desc: "SHA-256 hashed API keys, per-key rate limiting, revocation is immediate" },
-              ].map((f) => (
-                <Card key={f.title} className="p-5 glass premium-card">
-                  <f.icon className="w-8 h-8 text-primary mb-3" />
-                  <h3 className="font-semibold font-display text-foreground mb-1">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground">{f.desc}</p>
-                </Card>
-              ))}
+        {/* ------------------------------------------------- what free covers */}
+        <section className="border-t border-border bg-muted/30">
+          <div className="container mx-auto max-w-5xl px-5 py-14">
+            <h2 className="text-xl font-bold text-foreground">
+              Every tool below is free, with no account
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              All of these run in your browser. Your files are never uploaded.
+            </p>
+
+            <div className="mt-7 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {TOOLS.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link
+                    key={tool.href}
+                    to={tool.href}
+                    className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 text-sm transition-colors hover:border-primary hover:bg-accent"
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="font-medium text-foreground">{tool.label}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* Internal Links */}
-        <section className="py-16">
-          <div className="container mx-auto px-4 max-w-3xl text-center">
-            <h2 className="text-2xl font-bold font-display text-foreground mb-6">Explore PDFly</h2>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button variant="outline" size="sm" asChild><Link to="/compress-pdf">Compress PDF</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/resize-image">Resize Image to KB</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/merge-pdf">Merge PDF</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/app">Text to PDF</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/docs">API Documentation</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/blog">Blog</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/status">System Status</Link></Button>
-              <Button variant="outline" size="sm" asChild><Link to="/#feedback">Give Feedback</Link></Button>
-            </div>
+        {/* -------------------------------------------------------------- faq */}
+        <section className="container mx-auto max-w-3xl px-5 py-14">
+          <h2 className="mb-7 text-xl font-bold text-foreground">Questions</h2>
+          <div className="space-y-6">
+            {[
+              {
+                q: "Why is it free?",
+                a: "The browser tools cost us nothing to run. Your device does the work, so there is no server bill that scales with usage. The API does cost money to run, which is why it has a quota.",
+              },
+              {
+                q: "Do you sell my files or my data?",
+                a: "No. Files processed by the browser tools never reach a server, so there is nothing to sell. The API processes files in memory and retains nothing after the response.",
+              },
+              {
+                q: "What happens if I exceed the API quota?",
+                a: `Requests return a 429 with a clear error code until the month resets. Nothing is charged and nothing is silently dropped. The limit is ${FREE_TIER_QUOTA} documents a month and ${RATE_LIMIT_PER_MIN} requests a minute.`,
+              },
+              {
+                q: "Can I use this commercially?",
+                a: "Yes, on both the browser tools and the free API tier, within the Terms of Service.",
+              },
+              {
+                q: "Will the free tier be taken away?",
+                a: "The browser tools stay free. If the API free tier ever changes, existing users will be told before it happens, not after.",
+              },
+            ].map(({ q, a }) => (
+              <div key={q}>
+                <h3 className="mb-1.5 font-semibold text-foreground">{q}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{a}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 rounded-lg border border-border p-5 text-sm text-muted-foreground">
+            Questions about pricing or usage limits:{" "}
+            <a href="mailto:support@3idhmind.in" className="text-primary hover:underline">
+              support@3idhmind.in
+            </a>
           </div>
         </section>
       </main>
@@ -154,6 +258,4 @@ const Pricing = () => {
       <Footer />
     </div>
   );
-};
-
-export default Pricing;
+}

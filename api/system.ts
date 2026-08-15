@@ -87,16 +87,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await fn();
       return { name, ok: true, latencyMs: Date.now() - t };
     } catch (err) {
-      // Names only — a message can carry connection strings.
-      return { name, ok: false, latencyMs: Date.now() - t, error: (err as Error).name };
+      // Neither the message nor the error class is returned. A message can
+      // carry connection strings, and a class name like FirebaseAppError names
+      // the vendor just as loudly as the service label used to.
+      void err;
+      return { name, ok: false, latencyMs: Date.now() - t };
     }
   };
 
+  /*
+   * Service names here are deliberately generic.
+   *
+   * They used to be "firestore" and "auth", which published our backend vendor
+   * to anyone who opened /api/health — and the status page rendered
+   * "Database: Firestore" straight onto a public page. Naming the provider
+   * tells an attacker which console to phish, which CVEs to try and which
+   * misconfigurations to probe for, and it buys a visitor nothing: someone
+   * checking a status page wants to know whether it works, not what it runs on.
+   *
+   * The probe itself is unchanged and still hits the real dependency. Only the
+   * label is abstract.
+   */
   const services = await Promise.all([
     probe("api", async () => true),
     // Cheapest round trip that still proves credentials and reachability.
-    probe("firestore", () => db().collection("_health").limit(1).get()),
-    probe("auth", () => adminAuth().listUsers(1)),
+    probe("database", () => db().collection("_health").limit(1).get()),
+    probe("authentication", () => adminAuth().listUsers(1)),
   ]);
 
   return ok(res, {

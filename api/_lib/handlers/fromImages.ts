@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { promises as dns } from "node:dns";
 import { PDFDocument } from "pdf-lib";
-import { fail, ok, handledPreflight } from "./_lib/http.js";
-import { requireUser } from "./_lib/requireUser.js";
-import { checkQuota, recordUsage, rateLimit, subjectOf } from "./_lib/quota.js";
+import { fail, ok, handledPreflight } from "../http.js";
+import { requireUser } from "../requireUser.js";
+import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
 
 /**
  * POST /api/images-to-pdf

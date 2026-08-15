@@ -9,6 +9,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { Link } from "react-router-dom";
 import { CodeSwitcher } from "@/components/CodeSwitcher";
 import { SITE_URL } from "@/lib/config";
+import { StorageNotice } from "@/components/StorageNotice";
 
 type Feature = 'text-to-pdf' | 'images-to-pdf';
 
@@ -40,7 +41,6 @@ const Docs = () => {
     { id: "quickstart", label: "Quick Start" },
     { id: "auth", label: "Authentication" },
     { id: "endpoints", label: "API Endpoints" },
-    { id: "sdk", label: "JavaScript SDK" },
     { id: "post-generate", label: "POST — Generate PDF" },
     { id: "tool-apis", label: "Tool APIs (Merge/Split/…)" },
     { id: "get-retrieve", label: "GET — Retrieve Documents" },
@@ -229,6 +229,7 @@ const Docs = () => {
       <SEOHead title="PDFly API Documentation — REST API for PDF Generation | 3idhMinds" description="Complete API documentation for PDFly. Generate PDFs with 15 templates, 11 page sizes, batch processing and 25+ image formats. Free REST API by 3idhMinds." keywords="PDF API documentation, REST API PDF generation, PDFly API docs, HTML to PDF API, 3idhMinds API" canonical={`${SITE_URL}/docs`} />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-5xl flex-1">
+        <StorageNotice className="mb-8" />
         <div className="flex gap-8 relative">
           {/* Sidebar TOC */}
           <aside className="hidden lg:block w-48 shrink-0">
@@ -335,69 +336,7 @@ const Docs = () => {
               </p>
             </Card>
 
-            {/* ===== JAVASCRIPT SDK ===== */}
-            <Card id="sdk" className="p-6 mb-6">
-              <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Code className="w-5 h-5 text-primary" /> JavaScript SDK
-              </h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                A lightweight TypeScript wrapper around every PDFly endpoint. Ships with types for every input and response.
-              </p>
-
-              <h3 className="text-sm font-semibold text-foreground mb-2">Install</h3>
-              <button onClick={() => copyToClipboard('npm install @pdfly/sdk', 'Install')} className="group w-full text-left mb-4">
-                <code className="text-sm bg-muted p-3 rounded block text-foreground group-hover:bg-muted/80 transition-colors flex items-center justify-between">
-                  <span>npm install @pdfly/sdk</span>
-                  <Copy className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </code>
-              </button>
-
-              <h3 className="text-sm font-semibold text-foreground mb-2">Quick start</h3>
-              <CodeSwitcher entries={[{
-                language: "typescript", label: "TypeScript",
-                code: `import { PDFly } from "@pdfly/sdk";
-
-const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
-
-// Text to PDF
-const { pdfs } = await pdfly.textToPdf({
-  documents: [{ title: "Invoice", content: "<h1>Hello</h1>" }],
-  template: "professional",
-});
-
-// Merge two PDFs (URLs or base64)
-const merged = await pdfly.mergePdf({ pdfs: [pdfs[0].url, "https://example.com/other.pdf"] });
-
-// Split a PDF into segments
-const split = await pdfly.splitPdf({ pdf: merged.url, ranges: "1-3,5,7-9" });
-
-// Compress
-const small = await pdfly.compressPdf({ pdf: merged.url });
-
-// Split every page into a separate PDF
-const perPage = await pdfly.pdfToImages({ pdf: merged.url });`,
-              }]} />
-
-              <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">Methods</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-border">
-                    <th className="text-left p-2 text-foreground">Method</th>
-                    <th className="text-left p-2 text-foreground">Endpoint</th>
-                    <th className="text-left p-2 text-foreground">Purpose</th>
-                  </tr></thead>
-                  <tbody className="text-muted-foreground">
-                    <tr className="border-b border-border"><td className="p-2 font-mono">textToPdf</td><td className="p-2 font-mono">/generate-pdf</td><td className="p-2">HTML/text → PDF (batch)</td></tr>
-                    <tr className="border-b border-border"><td className="p-2 font-mono">batchGenerate</td><td className="p-2 font-mono">/generate-pdf</td><td className="p-2">Alias of textToPdf — up to 5 docs per call</td></tr>
-                    <tr className="border-b border-border"><td className="p-2 font-mono">mergePdf</td><td className="p-2 font-mono">/merge-pdf</td><td className="p-2">Combine multiple PDFs</td></tr>
-                    <tr className="border-b border-border"><td className="p-2 font-mono">splitPdf</td><td className="p-2 font-mono">/split-pdf</td><td className="p-2">Extract page ranges</td></tr>
-                    <tr className="border-b border-border"><td className="p-2 font-mono">compressPdf</td><td className="p-2 font-mono">/compress-pdf</td><td className="p-2">Rewrite with smaller size</td></tr>
-                    <tr><td className="p-2 font-mono">pdfToImages</td><td className="p-2 font-mono">/pdf-to-images</td><td className="p-2">Each page as separate PDF</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-
+            
             {/* ===== 4. POST — GENERATE PDF ===== */}
             <Card id="post-generate" className="p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
@@ -1102,17 +1041,6 @@ if (!res.ok) {
 }
 const { url, pages_merged } = await res.json();
 console.log(\`Merged \${pages_merged} pages → \${url}\`); // expires in 1 hour` },
-                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
-const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
-
-try {
-  const merged = await pdfly.mergePdf({
-    pdfs: ["https://example.com/a.pdf", "https://example.com/b.pdf"],
-  });
-  console.log(merged.url);
-} catch (err) {
-  console.error("Merge failed:", (err as Error).message);
-}` },
                   { language: "python", label: "Python", code: `import os, requests
 
 resp = requests.post(
@@ -1134,10 +1062,10 @@ except requests.HTTPError:
     raise RuntimeError(f"Merge failed ({resp.status_code}): {err.get('message')}")
 
 data = resp.json()
-print("Merged", data["pages_merged"], "pages ->", data["url"])` },
+open("merged.pdf","wb").write(base64.b64decode(data["pdf_base64"]))` },
                 ]} />
                 <p className="text-xs text-muted-foreground mt-2">Response:</p>
-                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "url": "...", "size_bytes": 45230, "pages_merged": 8, "expires_in_seconds": 3600 }`}</pre>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "filename": "merged.pdf", "pdf_base64": "JVBERi0x...", "size_bytes": 45230, "pages_merged": 8, "inputs": 3, "processing_time_ms": 412 }`}</pre>
               </div>
 
               {/* SPLIT */}
@@ -1171,18 +1099,6 @@ if (!res.ok) {
 }
 const data = await res.json();
 data.pdfs.forEach(p => console.log(p.name, "->", p.url));` },
-                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
-const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
-
-try {
-  const split = await pdfly.splitPdf({
-    pdf: "https://example.com/doc.pdf",
-    ranges: "1-3,5,7-9",
-  });
-  split.pdfs.forEach(p => console.log(p.name, p.url));
-} catch (err) {
-  console.error("Split failed:", (err as Error).message);
-}` },
                   { language: "python", label: "Python", code: `import os, requests
 
 resp = requests.post(
@@ -1204,13 +1120,13 @@ except requests.HTTPError:
     raise RuntimeError(f"Split failed ({resp.status_code}): {err.get('message')}")
 
 for p in resp.json()["pdfs"]:
-    print(p["name"], "->", p["url"])` },
+    open(p["name"],"wb").write(base64.b64decode(p["data"]))` },
                 ]} />
                 <p className="text-xs text-muted-foreground mt-2">Response:</p>
                 <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "source_pages": 10, "pdfs": [
-  { "name": "split_p1-3.pdf", "url": "...", "size_bytes": 12034, "pages": 3 },
-  { "name": "split_p5.pdf",   "url": "...", "size_bytes": 4210,  "pages": 1 },
-  { "name": "split_p7-9.pdf", "url": "...", "size_bytes": 11023, "pages": 3 }
+  { "name": "split_p1-3.pdf", "data": "JVBERi0x...", "size_bytes": 12034, "pages": 3 },
+  { "name": "split_p5.pdf",   "data": "JVBERi0x...", "size_bytes": 4210,  "pages": 1 },
+  { "name": "split_p7-9.pdf", "data": "JVBERi0x...", "size_bytes": 11023, "pages": 3 }
 ]}`}</pre>
               </div>
 
@@ -1241,15 +1157,6 @@ if (!res.ok) {
 }
 const data = await res.json();
 console.log(\`Saved \${data.savings_percent}% -> \${data.url}\`);` },
-                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
-const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
-
-try {
-  const small = await pdfly.compressPdf({ pdf: "https://example.com/big.pdf" });
-  console.log(\`Saved \${small.savings_percent}%\`);
-} catch (err) {
-  console.error("Compress failed:", (err as Error).message);
-}` },
                   { language: "python", label: "Python", code: `import os, requests
 
 resp = requests.post(
@@ -1271,7 +1178,7 @@ data = resp.json()
 print(f"Saved {data['savings_percent']}% -> {data['url']}")` },
                 ]} />
                 <p className="text-xs text-muted-foreground mt-2">Response:</p>
-                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "url": "...", "original_size_bytes": 1240000, "compressed_size_bytes": 890000, "compression_ratio": 0.718, "savings_percent": 28.2 }`}</pre>
+                <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "name": "compressed.pdf", "data": "JVBERi0x...", "original_size_bytes": 1240000, "compressed_size_bytes": 890000, "compression_ratio": 0.718, "savings_percent": 28.2 }`}</pre>
               </div>
 
               {/* PDF-TO-IMAGES */}
@@ -1304,15 +1211,6 @@ if (!res.ok) {
 }
 const data = await res.json();
 data.pages.forEach(p => console.log("page", p.page, "->", p.url));` },
-                  { language: "javascript", label: "SDK", code: `import { PDFly } from "@pdfly/sdk";
-const pdfly = new PDFly({ apiKey: process.env.PDFLY_API_KEY! });
-
-try {
-  const out = await pdfly.pdfToImages({ pdf: "https://example.com/doc.pdf" });
-  out.pages.forEach(p => console.log("page", p.page, "->", p.url));
-} catch (err) {
-  console.error("PDF-to-images failed:", (err as Error).message);
-}` },
                   { language: "python", label: "Python", code: `import os, requests
 
 resp = requests.post(
@@ -1331,13 +1229,13 @@ except requests.HTTPError:
     raise RuntimeError(f"pdf-to-images failed ({resp.status_code}): {err.get('message')}")
 
 for p in resp.json()["pages"]:
-    print("page", p["page"], "->", p["url"])` },
+    open(p["filename"],"wb").write(base64.b64decode(p["data"]))` },
                 ]} />
                 <p className="text-xs text-muted-foreground mt-2">Response:</p>
                 <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">{`{ "success": true, "output_format": "pdf-per-page", "page_count": 3, "pages": [
-  { "page": 1, "url": "...", "size_bytes": 4210 },
-  { "page": 2, "url": "...", "size_bytes": 3980 },
-  { "page": 3, "url": "...", "size_bytes": 4102 }
+  { "page": 1, "filename": "page_1.png", "data": "iVBORw0K...", "size_bytes": 4210 },
+  { "page": 2, "filename": "page_2.png", "data": "iVBORw0K...", "size_bytes": 3980 },
+  { "page": 3, "filename": "page_3.png", "data": "iVBORw0K...", "size_bytes": 4102 }
 ]}`}</pre>
               </div>
             </Card>

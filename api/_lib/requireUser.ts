@@ -101,6 +101,35 @@ export async function requireUser(req: VercelRequest, res: VercelResponse): Prom
 }
 
 /**
+ * Does this caller belong to the admin account?
+ *
+ * `caller.isAdmin` is decided at authentication time and is always false for an
+ * API key, because the key document does not carry the owner's email and
+ * reading it on every request would put a Firestore lookup in front of every
+ * PDF generated. This resolves it on demand instead, so only the handful of
+ * admin-gated routes pay for it.
+ *
+ * One API, not two: a key minted by the admin account can publish blog posts.
+ * A key minted by anyone else cannot, no matter what it asks for — the answer
+ * comes from the owner's Firebase-verified email, never from the request.
+ *
+ * NOT used for the feedback inbox or the security log. Those carry other
+ * users' email addresses, and an API key is a long-lived string that ends up in
+ * scripts, CI and shell history; those two stay ID-token-only so reading other
+ * people's data always requires an interactive sign-in.
+ */
+export async function isAdminAccount(caller: Caller): Promise<boolean> {
+  if (caller.isAdmin) return true; // ID token, already established
+  if (caller.authType !== "apiKey") return false;
+  try {
+    const user = await adminAuth().getUser(caller.uid);
+    return isAdminEmail(user.email, user.emailVerified);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * True when this Firebase-verified email is the deployment's admin.
  *
  * ADMIN_EMAIL is deliberately NOT `VITE_`-prefixed: a `VITE_` var is compiled

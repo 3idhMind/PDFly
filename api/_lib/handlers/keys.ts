@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { FieldValue } from "firebase-admin/firestore";
-import { db, PRODUCT_ID, DEFAULT_RATE_LIMIT_PER_MIN } from "./_lib/firebase.js";
-import { generateApiKey } from "./_lib/apiKeys.js";
-import { requireUser } from "./_lib/requireUser.js";
-import { fail, ok, handledPreflight } from "./_lib/http.js";
+import { db, PRODUCT_ID, DEFAULT_RATE_LIMIT_PER_MIN } from "../firebase.js";
+import { generateApiKey } from "../apiKeys.js";
+import { requireUser } from "../requireUser.js";
+import { fail, ok, handledPreflight } from "../http.js";
+import { logServerActivity } from "../activity.js";
 
 /** Enough for real use, low enough that a runaway script can't fill a collection. */
 const MAX_KEYS_PER_USER = 10;
@@ -84,17 +85,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         name,
         keyPrefix: generated.prefix,
         active: true,
-        // `blog:write` publishes to the site's own blog, so only the admin may
-        // mint a key that carries it, and it must be asked for explicitly —
-        // never handed out by default with an ordinary developer key.
-        scopes:
-          caller.isAdmin && req.body?.scopes?.includes("blog:write")
-            ? ["pdf:generate", "blog:write"]
-            : ["pdf:generate"],
+        scopes: ["pdf:generate"],
         rateLimitPerMin: DEFAULT_RATE_LIMIT_PER_MIN,
         createdAt: FieldValue.serverTimestamp(),
         lastUsedAt: null,
       });
+
+      // Audit trail: who, when, which key, under what name. The raw key is
+      // never part of this — only the public prefix, which is enough to tie a
+      // later revocation or usage spike back to this exact creation event.
+      await logServerActivity(
+        { uid: caller.uid, authType: caller.authType },
+        "apikey.created",
+        { keyId, keyName: name, keyPrefix: generated.prefix, rateLimitPerMin: DEFAULT_RATE_LIMIT_PER_MIN },
+      );
 
       // The only moment `raw` ever leaves this process. Not logged anywhere.
       return ok(
@@ -123,7 +127,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // document is gone the key is unrecoverable by anyone, including us —
       // which is what "irreversible" has to mean. Verification is a lookup on
       // this exact document, so revocation takes effect on the next request.
+      const revokedName = target.data().name as string | undefined;
+      const revokedPrefix = target.data().keyPrefix as string | undefined;
       await target.ref.delete();
+
+      await logServerActivity(
+        { uid: caller.uid, authType: caller.authType },
+        "apikey.revoked",
+        { keyId, keyName: revokedName ?? null, keyPrefix: revokedPrefix ?? null },
+      );
+
       return ok(res, { revoked: true, keyId });
     }
 

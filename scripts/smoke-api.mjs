@@ -60,10 +60,23 @@ if (!existsSync(apiDir)) {
   process.exit(1);
 }
 
-// Same rule Vercel uses: a file in api/ is a function unless it starts with `_`.
-const functions = readdirSync(apiDir)
-  .filter((f) => f.endsWith(".js") && !f.startsWith("_"))
-  .sort();
+/**
+ * Same rule Vercel uses: anything under api/ is a function unless its path
+ * starts with `_`. Walks subdirectories too, because the API is now grouped
+ * into namespaces (api/pdf/[...path].ts and friends) rather than a flat list.
+ */
+function findFunctions(dir, prefix = "") {
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith("_")) continue;
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) out.push(...findFunctions(join(dir, entry.name), rel));
+    else if (entry.name.endsWith(".js")) out.push(rel);
+  }
+  return out.sort();
+}
+
+const functions = findFunctions(apiDir);
 
 /* -------------------------------------------------------------- fake request */
 
@@ -108,6 +121,25 @@ function mockRes() {
 
 /* ------------------------------------------------------------------- run it */
 
+/**
+ * Sub-routes to drive per namespace, so every dynamically imported handler is
+ * actually loaded. Keep in step with the ROUTES tables in the routers.
+ */
+const ROUTE_MATRIX = {
+  "pdf/[...path]": [
+    ["generate"],
+    ["basic", "merge"],
+    ["basic", "split"],
+    ["optimize", "compress"],
+    ["convert", "to-pages"],
+    ["convert", "to-images"],
+    ["convert", "from-images"],
+    ["fallback"],
+  ],
+  "account/[...path]": [["me"], ["keys"]],
+  "admin/[...path]": [["feedback"], ["events"], ["activity"], ["blog"]],
+};
+
 let failed = 0;
 const results = [];
 
@@ -117,7 +149,7 @@ for (const file of functions) {
 
   // HARD gate: does it load at all?
   try {
-    mod = await import(pathToFileURL(join(apiDir, file)).href);
+    mod = await import(pathToFileURL(join(apiDir, ...file.split("/"))).href);
   } catch (err) {
     results.push({ name, ok: false, detail: `LOAD FAILED — ${err.code ?? ""} ${err.message.split("\n")[0]}` });
     failed++;
@@ -131,19 +163,31 @@ for (const file of functions) {
   }
 
   // SOFT check: does invoking it produce a response instead of escaping?
-  const res = mockRes();
-  const req = { method: "GET", query: {}, headers: {}, body: {} };
-  try {
-    await mod.default(req, res);
-    results.push({
-      name,
-      ok: true,
-      detail: res.settled ? `responded ${res.statusCode ?? 200}` : "loaded (no response on bare GET)",
-    });
-  } catch (err) {
-    // A throw is not automatically a failure — without real credentials some
-    // handlers legitimately blow up inside. It is still worth printing.
-    results.push({ name, ok: true, detail: `loaded; threw when invoked (${err.code ?? err.name})` });
+  //
+  // Routers matter more than they look here. `api/pdf/[...path].ts` pulls its
+  // handlers in with dynamic import(), so a bare call to the router proves
+  // nothing about them — the very module-load failure this script exists to
+  // catch would sit undetected behind a 404. Every sub-route is therefore
+  // driven explicitly.
+  for (const segs of ROUTE_MATRIX[name] ?? [[]]) {
+    const res = mockRes();
+    const req = { method: "GET", query: { path: segs }, headers: {}, body: {} };
+    const label = segs.length ? `${name}/${segs.join("/")}` : name;
+    try {
+      await mod.default(req, res);
+      results.push({
+        name: label,
+        ok: true,
+        detail: res.settled ? `responded ${res.statusCode ?? 200}` : "loaded (no response)",
+      });
+    } catch (err) {
+      // Without real credentials some handlers legitimately throw inside. That
+      // is not a failure; a module that will not load is.
+      const code = err.code ?? err.name;
+      const fatal = code === "ERR_MODULE_NOT_FOUND" || code === "ERR_REQUIRE_ESM";
+      if (fatal) failed++;
+      results.push({ name: label, ok: !fatal, detail: `${fatal ? "LOAD FAILED" : "loaded; threw"} (${code})` });
+    }
   }
 }
 
@@ -152,11 +196,11 @@ rmSync(outDir, { recursive: true, force: true });
 /* ------------------------------------------------------------------- report */
 
 for (const r of results) {
-  console.log(`  ${r.ok ? "ok  " : "FAIL"} ${r.name.padEnd(16)} ${r.detail}`);
+  console.log(`  ${r.ok ? "ok  " : "FAIL"} ${r.name.padEnd(28)} ${r.detail}`);
 }
 
 console.log(
-  `\n[smoke] ${functions.length} functions, ${functions.length - failed} loaded, ${failed} failed` +
+  `\n[smoke] ${functions.length} functions, ${results.length} routes exercised, ${failed} failed` +
     `  (Vercel Hobby cap: 12)`,
 );
 

@@ -53,19 +53,19 @@ const Status = () => {
     // that is actually broken rather than collapsing to "backend down".
     try {
       const start = Date.now();
-      const res = await fetch("/api/health");
+      const res = await fetch("/api/system");
       const latency = Date.now() - start;
       const data = await res.json();
       const svc = (name: string) =>
         (data.services ?? []).find((s: { name: string }) => s.name === name);
 
-      const database = svc("firestore");
+      const database = svc("database");
       infra.push({
         name: "Database",
         status: database?.ok ? "operational" : "degraded",
         latency: database?.latencyMs ?? latency,
         icon: Database,
-        description: "Firestore",
+        description: "Document store",
       });
 
       infra.push({
@@ -73,11 +73,11 @@ const Status = () => {
         status: res.ok && data.status === "operational" ? "operational" : "degraded",
         latency,
         icon: Zap,
-        description: "Serverless compute layer",
+        description: "Request processing",
       });
     } catch {
-      infra.push({ name: "Database", status: "down", icon: Database, description: "Firestore" });
-      infra.push({ name: "API", status: "down", icon: Zap, description: "Serverless compute layer" });
+      infra.push({ name: "Database", status: "down", icon: Database, description: "Document store" });
+      infra.push({ name: "API", status: "down", icon: Zap, description: "Request processing" });
     }
 
     // 3. PDF Engine — client-side library (always available if page loaded)
@@ -87,10 +87,10 @@ const Status = () => {
         name: "PDF Engine",
         status: html2pdf ? "operational" : "degraded",
         icon: Server,
-        description: "Client-side PDF generation",
+        description: "In-browser processing",
       });
     } catch {
-      infra.push({ name: "PDF Engine", status: "degraded", icon: Server, description: "Client-side PDF generation" });
+      infra.push({ name: "PDF Engine", status: "degraded", icon: Server, description: "In-browser processing" });
     }
 
     setInfraServices(infra);
@@ -100,11 +100,11 @@ const Status = () => {
       const auth: ServiceCheck[] = [];
       try {
         const start = Date.now();
-        // /api/keys requires a valid ID token, so a 200 proves the whole
-        // authenticated path works end to end — token minting, verification,
-        // and an authorised Firestore read — not just that a server answered.
+        // Requires a valid ID token, so a 200 proves the whole authenticated
+        // path works end to end — token minting, verification and an
+        // authorised read — not merely that a server answered.
         const token = await getIdToken();
-        const res = await fetch("/api/keys", {
+        const res = await fetch("/api/account/keys", {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const latency = Date.now() - start;
@@ -116,7 +116,7 @@ const Status = () => {
           status: isOperational ? "operational" : "degraded",
           latency,
           icon: Shield,
-          description: "Authenticated backend access",
+          description: "Signed-in requests",
         });
       } catch {
         auth.push({

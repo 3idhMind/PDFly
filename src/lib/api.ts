@@ -62,18 +62,18 @@ export interface CreatedApiKey {
 
 export const api = {
   /** Identity + admin flag, decided server-side. See api/me.ts. */
-  me: () => request<{ uid: string; authType: string; isAdmin: boolean }>("/api/me"),
+  me: () => request<{ uid: string; authType: string; isAdmin: boolean }>("/api/account/me"),
 
-  listKeys: () => request<{ keys: ApiKeySummary[] }>("/api/keys"),
+  listKeys: () => request<{ keys: ApiKeySummary[] }>("/api/account/keys"),
 
   createKey: (name: string) =>
-    request<CreatedApiKey>("/api/keys", {
+    request<CreatedApiKey>("/api/account/keys", {
       method: "POST",
       body: JSON.stringify({ name }),
     }),
 
   revokeKey: (keyId: string) =>
-    request<{ revoked: boolean }>(`/api/keys?id=${encodeURIComponent(keyId)}`, {
+    request<{ revoked: boolean }>(`/api/account/keys?id=${encodeURIComponent(keyId)}`, {
       method: "DELETE",
     }),
 };
@@ -100,10 +100,10 @@ export interface AdminPost {
 
 /** Every one of these 403s for a non-admin caller, server-side. */
 export const admin = {
-  feedback: () => request<{ feedback: FeedbackEntry[]; count: number }>("/api/admin-feedback"),
+  feedback: () => request<{ feedback: FeedbackEntry[]; count: number }>("/api/admin/feedback"),
 
   deleteFeedback: (id: string) =>
-    request<{ deleted: string }>(`/api/admin-feedback?id=${encodeURIComponent(id)}`, {
+    request<{ deleted: string }>(`/api/admin/feedback?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     }),
 

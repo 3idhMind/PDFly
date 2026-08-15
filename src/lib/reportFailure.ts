@@ -11,7 +11,7 @@ export async function reportFailure(input: {
   type?: string;
 }) {
   try {
-    await fetch("/api/report-issue", {
+    await fetch("/api/system", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       keepalive: true,

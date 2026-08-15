@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Calendar, Clock, ArrowRight } from "lucide-react";
 import { blogPosts } from "./Blog";
 import { SITE_URL } from "@/lib/config";
-import { blogCover } from "@/lib/blogCover";
 
 const blogContent: Record<string, string> = {
   "convert-images-to-pdf-free": `Converting images to PDF is one of the most common tasks — whether you're archiving photos, creating portfolios, submitting documents, or building reports with visual content. PDFly's Image to PDF tool makes this effortless with support for 25+ image formats and 100+ images per PDF.
@@ -853,12 +852,7 @@ const BlogPost = () => {
             <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {postMeta.date}</span>
             <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {postMeta.readTime}</span>
           </div>
-          <img
-            src={blogCover(slug ?? postMeta.title)}
-            alt=""
-            aria-hidden="true"
-            className="w-full h-64 object-cover rounded-lg mb-8"
-          />
+          
           <Card className="p-8 glass">
             <div className="prose prose-sm max-w-none">
               {content.split("\n\n").map((p, i) => (
@@ -886,7 +880,7 @@ const BlogPost = () => {
             {related.map((post) => (
               <Link key={post.slug} to={`/blog/${post.slug}`} className="group">
                 <Card className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <img src={blogCover(post.slug)} alt="" aria-hidden="true" className="w-20 h-14 object-cover rounded" />
+                  
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{post.title}</h4>
                     <p className="text-xs text-muted-foreground">{post.readTime} read</p>

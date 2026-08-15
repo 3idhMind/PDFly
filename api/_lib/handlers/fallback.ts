@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { PDFDocument } from "pdf-lib";
-import { fail, ok, handledPreflight } from "./_lib/http.js";
-import { rateLimit } from "./_lib/quota.js";
+import { fail, ok, handledPreflight } from "../http.js";
+import { rateLimit } from "../quota.js";
 
 /**
  * Public, anonymous, zero-retention PDF fallback for the web UI.

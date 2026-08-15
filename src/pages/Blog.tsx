@@ -9,7 +9,6 @@ import { motion } from "framer-motion";
 import { Calendar, Clock, ArrowRight, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SITE_URL } from "@/lib/config";
-import { blogCover } from "@/lib/blogCover";
 
 export interface BlogPostMeta {
   slug: string;
@@ -163,14 +162,6 @@ const Blog = () => {
           {blogPosts.map((post, i) => (
             <motion.div key={post.slug} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card className="overflow-hidden glass hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
-                <Link to={`/blog/${post.slug}`}>
-                  <img
-                    src={blogCover(post.slug)}
-                    alt=""
-                    aria-hidden="true"
-                    className="w-full h-48 object-cover"
-                  />
-                </Link>
                 <div className="p-6">
                   <div className="flex flex-wrap gap-2 mb-3">
                     {post.tags.map((tag) => (

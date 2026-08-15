@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Play, ExternalLink, Loader2, KeyRound, Copy, Check } from "lucide-react";
 import { getIdToken } from "@/lib/firebase/auth";
 import { ApiMaintenanceNotice } from "@/components/ApiMaintenanceNotice";
+import { StorageNotice } from "@/components/StorageNotice";
 import { useToast } from "@/hooks/use-toast";
 
 // Same-origin. This used to be hardcoded to the production URL, which meant
@@ -201,6 +202,7 @@ const ApiPlayground = () => {
         </div>
 
         <ApiMaintenanceNotice className="mb-8" />
+        <StorageNotice className="mb-8" />
 
         <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
           {/* Sidebar */}

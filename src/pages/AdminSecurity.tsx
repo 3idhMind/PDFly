@@ -51,7 +51,7 @@ export default function AdminSecurity() {
     setLoadError(null);
     try {
       const token = await getIdToken();
-      const res = await fetch("/api/admin-events", {
+      const res = await fetch("/api/admin/events", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const body = await res.json().catch(() => null);

@@ -5,7 +5,7 @@ import { Activity } from "lucide-react";
 /**
  * Live API status, small enough to sit in a footer or at the bottom of a page.
  *
- * Calls the real `/api/health` probe, which independently checks Firestore and
+ * Calls the real `/api/system` probe, which independently checks Firestore and
  * Firebase Auth and always answers 200 with the verdict in the body. That
  * matters here: a status widget that goes blank when the API is down is worse
  * than no widget, because "nothing rendered" and "everything is fine" look
@@ -30,7 +30,7 @@ export const ApiStatusBadge = ({ className = "" }: { className?: string }) => {
   useEffect(() => {
     let cancelled = false;
 
-    fetch("/api/health", { signal: AbortSignal.timeout(8000) })
+    fetch("/api/system", { signal: AbortSignal.timeout(8000) })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((body) => {
         if (cancelled) return;

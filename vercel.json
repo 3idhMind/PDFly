@@ -10,10 +10,21 @@
   "trailingSlash": false,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/api/me", "destination": "/api/account?action=me" },
-    { "source": "/api/admin-feedback", "destination": "/api/account?action=feedback" },
-    { "source": "/api/admin-events", "destination": "/api/account?action=events" },
     { "source": "/api/health", "destination": "/api/system" },
-    { "source": "/api/report-issue", "destination": "/api/system" }
+    { "source": "/api/report-issue", "destination": "/api/system" },
+
+    { "source": "/api/me", "destination": "/api/account/me" },
+    { "source": "/api/keys", "destination": "/api/account/keys" },
+
+    { "source": "/api/admin-feedback", "destination": "/api/admin/feedback" },
+    { "source": "/api/admin-events", "destination": "/api/admin/events" },
+
+    { "source": "/api/generate-pdf", "destination": "/api/pdf/generate" },
+    { "source": "/api/merge-pdf", "destination": "/api/pdf/basic/merge" },
+    { "source": "/api/split-pdf", "destination": "/api/pdf/basic/split" },
+    { "source": "/api/compress-pdf", "destination": "/api/pdf/optimize/compress" },
+    { "source": "/api/pdf-to-images", "destination": "/api/pdf/convert/to-pages" },
+    { "source": "/api/images-to-pdf", "destination": "/api/pdf/convert/from-images" },
+    { "source": "/api/pdf-fallback", "destination": "/api/pdf/fallback" }
   ]
 }
