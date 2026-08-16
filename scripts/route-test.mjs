@@ -67,6 +67,16 @@ const functionFiles = new Set(
 
 /* ------------------------------------------------------------------ routing */
 
+// Enough environment for handlers to construct. Never real credentials.
+process.env.FIREBASE_PROJECT_ID ||= "route-test";
+process.env.FIREBASE_CLIENT_EMAIL ||= "route@test.iam.gserviceaccount.com";
+process.env.FIREBASE_PRIVATE_KEY ||= [
+  "-----BEGIN PRIVATE KEY-----",
+  "cm91dGU=",
+  "-----END PRIVATE KEY-----",
+].join("\n");
+process.env.FILE_TOKEN_SECRET ||= "route-test-secret";
+
 const vercel = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
 const rewrites = vercel.rewrites ?? [];
 
@@ -143,6 +153,19 @@ const EXPECT = {
   "/api/pdf-fallback": "fallback",
 };
 
+/*
+ * A real signed token, so this exercises the whole download path rather than
+ * only the rewrite. An invalid token correctly answers 404, which would be
+ * indistinguishable from "the route never dispatched" — the exact failure this
+ * script exists to catch — so the test must present a valid one.
+ */
+{
+  const { createFileToken } = await import(
+    pathToFileURL(join(apiDir, "_lib/fileToken.js")).href
+  );
+  EXPECT[`/api/file/${createFileToken("uid/2026-08-15/ab12cd34-demo.pdf", 3600)}`] = "__token__";
+}
+
 /* ---------------------------------------------------------------------- run */
 
 let failed = 0;
@@ -158,7 +181,14 @@ for (const [url, expectedOp] of Object.entries(EXPECT)) {
   }
 
   const actualOp = query.op ?? null;
-  if (expectedOp !== null && actualOp !== expectedOp) {
+
+  if (expectedOp === "__token__" && !actualOp) {
+    console.log(`  FAIL ${url.slice(0, 32).padEnd(32)} -> token never reached the handler`);
+    failed++;
+    continue;
+  }
+  // "__token__" means: any non-empty op is right, the value is generated.
+  if (expectedOp !== null && expectedOp !== "__token__" && actualOp !== expectedOp) {
     console.log(
       `  FAIL ${url.padEnd(32)} -> ${resolved.path} op="${actualOp}" (expected "${expectedOp}")`,
     );
@@ -184,7 +214,9 @@ for (const [url, expectedOp] of Object.entries(EXPECT)) {
     status = res.statusCode ?? 200;
     // A namespaced URL that comes back UNKNOWN_OPERATION means the op never
     // arrived — the exact production failure this script was written for.
-    if (status === 404 && expectedOp !== null) {
+    // /api/file answers 404 when storage is not configured, which is correct
+    // and is the state every local run is in.
+    if (status === 404 && expectedOp !== null && expectedOp !== "__token__") {
       console.log(`  FAIL ${url.padEnd(32)} -> ${resolved.path} dispatched nothing (404)`);
       failed++;
       continue;
@@ -193,8 +225,9 @@ for (const [url, expectedOp] of Object.entries(EXPECT)) {
     status = `threw ${err.code ?? err.name}`;
   }
 
+  const shown = url.length > 32 ? url.slice(0, 29) + "..." : url;
   console.log(
-    `  ok   ${url.padEnd(32)} -> ${resolved.path}${expectedOp ? ` op="${actualOp}"` : ""}  [${status}]`,
+    `  ok   ${shown.padEnd(32)} -> ${resolved.path}${expectedOp ? ` op="${String(actualOp).slice(0, 18)}"` : ""}  [${status}]`,
   );
 }
 

@@ -3,31 +3,83 @@
     {
       "source": "/assets/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     }
   ],
   "trailingSlash": false,
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/api/health", "destination": "/api/system" },
-    { "source": "/api/report-issue", "destination": "/api/system" },
-
-    { "source": "/api/me", "destination": "/api/account?op=me" },
-    { "source": "/api/keys", "destination": "/api/account?op=keys" },
-    { "source": "/api/admin-feedback", "destination": "/api/admin?op=feedback" },
-    { "source": "/api/admin-events", "destination": "/api/admin?op=events" },
-
-    { "source": "/api/generate-pdf", "destination": "/api/pdf?op=generate" },
-    { "source": "/api/merge-pdf", "destination": "/api/pdf?op=basic/merge" },
-    { "source": "/api/split-pdf", "destination": "/api/pdf?op=basic/split" },
-    { "source": "/api/compress-pdf", "destination": "/api/pdf?op=optimize/compress" },
-    { "source": "/api/pdf-to-images", "destination": "/api/pdf?op=convert/to-pages" },
-    { "source": "/api/images-to-pdf", "destination": "/api/pdf?op=convert/from-images" },
-    { "source": "/api/pdf-fallback", "destination": "/api/pdf?op=fallback" },
-
-    { "source": "/api/pdf/:op*", "destination": "/api/pdf?op=:op*" },
-    { "source": "/api/account/:op*", "destination": "/api/account?op=:op*" },
-    { "source": "/api/admin/:op*", "destination": "/api/admin?op=:op*" }
+    {
+      "source": "/api/health",
+      "destination": "/api/system"
+    },
+    {
+      "source": "/api/report-issue",
+      "destination": "/api/system"
+    },
+    {
+      "source": "/api/me",
+      "destination": "/api/account?op=me"
+    },
+    {
+      "source": "/api/keys",
+      "destination": "/api/account?op=keys"
+    },
+    {
+      "source": "/api/admin-feedback",
+      "destination": "/api/admin?op=feedback"
+    },
+    {
+      "source": "/api/admin-events",
+      "destination": "/api/admin?op=events"
+    },
+    {
+      "source": "/api/generate-pdf",
+      "destination": "/api/pdf?op=generate"
+    },
+    {
+      "source": "/api/merge-pdf",
+      "destination": "/api/pdf?op=basic/merge"
+    },
+    {
+      "source": "/api/split-pdf",
+      "destination": "/api/pdf?op=basic/split"
+    },
+    {
+      "source": "/api/compress-pdf",
+      "destination": "/api/pdf?op=optimize/compress"
+    },
+    {
+      "source": "/api/pdf-to-images",
+      "destination": "/api/pdf?op=convert/to-pages"
+    },
+    {
+      "source": "/api/images-to-pdf",
+      "destination": "/api/pdf?op=convert/from-images"
+    },
+    {
+      "source": "/api/pdf-fallback",
+      "destination": "/api/pdf?op=fallback"
+    },
+    {
+      "source": "/api/pdf/:op*",
+      "destination": "/api/pdf?op=:op*"
+    },
+    {
+      "source": "/api/account/:op*",
+      "destination": "/api/account?op=:op*"
+    },
+    {
+      "source": "/api/admin/:op*",
+      "destination": "/api/admin?op=:op*"
+    },
+    {
+      "source": "/api/file/:op*",
+      "destination": "/api/file?op=:op*"
+    }
   ]
 }

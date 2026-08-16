@@ -138,6 +138,61 @@ const check = (name, cond, detail = "") => {
   check("no expiry is claimed when nothing was stored", d.expires_at === null);
 }
 
+/* ------------------------------------------------------ signed file tokens */
+/*
+ * Download URLs live on our own domain and carry a signed token instead of a
+ * database row. A wrong signature or a wrong expiry means a link either stops
+ * working or never stops working, and both are silent in production.
+ */
+{
+  process.env.FILE_TOKEN_SECRET = "storage-test-secret";
+  const tokenPath = join(outDir, "api/_lib/fileToken.js");
+  const { createFileToken, verifyFileToken } = await import(pathToFileURL(tokenPath).href);
+
+  const key = "uid123/2026-08-15/ab12cd34-invoice.pdf";
+  const token = createFileToken(key, 3600);
+
+  check("token round-trips to the same key", verifyFileToken(token)?.key === key);
+  check("token has three parts", token.split(".").length === 3);
+  check("token is URL-safe", !/[+/=]/.test(token));
+
+  const [k, e, sig] = token.split(".");
+  check("tampered key is rejected", verifyFileToken(k + "X." + e + "." + sig) === null);
+  check("tampered expiry is rejected", verifyFileToken(k + "." + (Number(e) + 99999) + "." + sig) === null);
+  check("tampered signature is rejected", verifyFileToken(k + "." + e + "." + sig.slice(0, -2) + "zz") === null);
+  check("garbage is rejected", verifyFileToken("not-a-token") === null);
+  check("expired token is rejected", verifyFileToken(createFileToken(key, -10)) === null);
+
+  // Stops a link minted by a preview deployment working against production.
+  process.env.FILE_TOKEN_SECRET = "a-different-secret";
+  check("token signed with another secret is rejected", verifyFileToken(token) === null);
+  process.env.FILE_TOKEN_SECRET = "storage-test-secret";
+}
+
+/* -------------------------------------------- download URLs are on our domain */
+{
+  process.env.PUBLIC_BASE_URL = "https://pdfly.co.in";
+  process.env.FILEN_EMAIL = "storage@example.com";
+  process.env.FILEN_PASSWORD = "not-a-real-password";
+
+  const mod = await import(pathToFileURL(join(outDir, "api/_lib/storage.js")).href);
+  mod.resetStorageCache();
+
+  const provider = mod.storage();
+  check("Filen is chosen when its credentials are present", provider.name === "filen");
+
+  const link = await provider.getTemporaryLink("uid/2026-08-15/x-file.pdf");
+  check("download URL is on our own domain", String(link).startsWith("https://pdfly.co.in/api/file/"),
+    String(link).slice(0, 46) + "...");
+  check("download URL never names the storage vendor",
+    !/filen|backblaze|cloudflarestorage|amazonaws/i.test(String(link)));
+
+  delete process.env.FILEN_EMAIL;
+  delete process.env.FILEN_PASSWORD;
+  delete process.env.PUBLIC_BASE_URL;
+  mod.resetStorageCache();
+}
+
 rmSync(outDir, { recursive: true, force: true });
 
 console.log(`\n[storage] ${failed === 0 ? "all checks passed" : `${failed} failed`}`);

@@ -31,6 +31,8 @@
  */
 
 import { createS3Provider } from "./s3Adapter.js";
+import { createFilenProvider } from "./filenAdapter.js";
+import { createFileToken } from "./fileToken.js";
 
 /** Seconds a generated file stays retrievable once storage is attached. */
 export const RETENTION_SECONDS = Number(process.env.STORAGE_URL_TTL_SECONDS ?? 3600);
@@ -49,6 +51,12 @@ export interface StorageProvider {
   readonly persists: boolean;
   upload(key: string, bytes: Uint8Array, contentType: string): Promise<StoredObject | null>;
   getTemporaryLink(key: string, ttlSeconds?: number): Promise<string | null>;
+  /**
+   * Fetch the bytes back. Required because files are served from our own
+   * domain: api/file.ts downloads here and streams the result, so the storage
+   * vendor never appears in a URL a user sees.
+   */
+  download?(key: string): Promise<Buffer | Uint8Array | null>;
   delete(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
 }
@@ -70,6 +78,9 @@ const inlineOnly: StorageProvider = {
   async getTemporaryLink() {
     return null;
   },
+  async download() {
+    return null;
+  },
   async delete() {
     /* nothing was ever written */
   },
@@ -87,38 +98,73 @@ let cached: StorageProvider | null = null;
  * rather than half-enabling on partial configuration. A half-configured bucket
  * that fails at upload time would turn a working PDF request into a 500.
  */
+/**
+ * Every download URL we hand out points at our own domain.
+ *
+ * `PUBLIC_BASE_URL` lets the domain change without a code change; without it
+ * the site origin is used. The storage vendor is never part of the URL.
+ */
+function publicUrlFor(key: string): string {
+  const base = (process.env.PUBLIC_BASE_URL?.trim() || "https://pdfly.3idhmind.in").replace(/\/$/, "");
+  return `${base}/api/file/${createFileToken(key, RETENTION_SECONDS)}`;
+}
+
+/**
+ * Picks the provider from the environment.
+ *
+ * Filen is checked first because it is the one that can actually be signed up
+ * for here: B2, R2 and S3 all demand a payment card before issuing credentials,
+ * so the S3 adapter — written and tested — stays available but unreachable in
+ * practice. Order is preference, not quality.
+ *
+ * Deliberately all-or-nothing at each step: partial configuration falls through
+ * to `inlineOnly` rather than half-enabling and failing at upload time, which
+ * would turn a working PDF request into a 500.
+ */
 export function storage(): StorageProvider {
   if (cached) return cached;
+
+  const filenEmail = process.env.FILEN_EMAIL?.trim();
+  const filenPassword = process.env.FILEN_PASSWORD?.trim();
+  if (filenEmail && filenPassword) {
+    cached = createFilenProvider(
+      {
+        email: filenEmail,
+        password: filenPassword,
+        twoFactorCode: process.env.FILEN_2FA_CODE?.trim() || undefined,
+        publicUrlFor,
+      },
+      RETENTION_SECONDS,
+    );
+    return cached;
+  }
 
   const bucket = process.env.STORAGE_BUCKET?.trim();
   const accessKey = process.env.STORAGE_ACCESS_KEY_ID?.trim();
   const secret = process.env.STORAGE_SECRET_ACCESS_KEY?.trim();
-
-  if (!bucket || !accessKey || !secret) {
-    cached = inlineOnly;
-    return cached;
-  }
-
   const endpoint = process.env.STORAGE_ENDPOINT?.trim();
-  if (!endpoint) {
-    // An endpoint is not optional for B2 or R2, and guessing one would produce
-    // uploads that fail at request time instead of a clear "not configured".
-    console.warn("[storage] STORAGE_ENDPOINT is unset — staying on inline responses.");
-    cached = inlineOnly;
+
+  if (bucket && accessKey && secret && endpoint) {
+    cached = createS3Provider(
+      {
+        bucket,
+        accessKeyId: accessKey,
+        secretAccessKey: secret,
+        endpoint,
+        region: process.env.STORAGE_REGION?.trim() || "auto",
+      },
+      RETENTION_SECONDS,
+    );
     return cached;
   }
 
-  cached = createS3Provider(
-    {
-      bucket,
-      accessKeyId: accessKey,
-      secretAccessKey: secret,
-      endpoint,
-      region: process.env.STORAGE_REGION?.trim() || "auto",
-    },
-    RETENTION_SECONDS,
-  );
+  cached = inlineOnly;
   return cached;
+}
+
+/** Test seam: forces the next storage() call to re-read the environment. */
+export function resetStorageCache(): void {
+  cached = null;
 }
 
 export interface StorageDisclosure {
