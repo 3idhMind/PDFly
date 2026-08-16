@@ -9,118 +9,29 @@ import { motion } from "framer-motion";
 import { Calendar, Clock, ArrowRight, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SITE_URL } from "@/lib/config";
+import { loadBlogPosts, sortByDate, postDate, type BlogPost } from "@/lib/blogData";
+import { useEffect, useState } from "react";
 
-export interface BlogPostMeta {
-  slug: string;
-  title: string;
-  excerpt: string;
-  date: string;
-  readTime: string;
-  tags: string[];
-  image?: string;
-}
 
-export const blogPosts: BlogPostMeta[] = [
-  {
-    slug: "convert-images-to-pdf-free",
-    title: "Convert Images to PDF Free — JPG, PNG, HEIC & 25+ Formats",
-    excerpt: "Learn how to convert any image to PDF using PDFly. Supports 100+ images, 25+ formats including HEIC, WebP, RAW. Free, fast, client-side processing.",
-    date: "2026-03-28", readTime: "8 min",
-    tags: ["Image to PDF", "Free", "Tutorial"],
-  },
-  {
-    slug: "top-10-free-pdf-tools-developers-2026",
-    title: "Top 10 Free PDF Tools Every Developer Needs in 2026",
-    excerpt: "A curated list of the best free PDF tools for developers — generators, converters, APIs, and utilities that save hours of work.",
-    date: "2026-03-25", readTime: "10 min",
-    tags: ["Tools", "Listicle", "2026"],
-  },
-  {
-    slug: "pdf-generation-pipeline-pdfly-api",
-    title: "How to Build a PDF Generation Pipeline with PDFly API",
-    excerpt: "Step-by-step technical tutorial on building an automated PDF pipeline — from data collection to generation to delivery. JavaScript, Python examples.",
-    date: "2026-03-22", readTime: "14 min",
-    tags: ["Pipeline", "Automation", "Tutorial"],
-  },
-  {
-    slug: "pdfly-vs-adobe-smallpdf-comparison",
-    title: "PDFly vs Adobe Acrobat vs SmallPDF — Free PDF Converter Comparison",
-    excerpt: "Honest comparison of PDFly, Adobe Acrobat, and SmallPDF. Features, pricing, API access, privacy, and developer experience compared.",
-    date: "2026-03-19", readTime: "11 min",
-    tags: ["Comparison", "Adobe", "SmallPDF"],
-  },
-  {
-    slug: "html-to-pdf-api-guide",
-    title: "How to Convert HTML to PDF with a REST API — Complete Guide 2026",
-    excerpt: "Learn how to generate professional PDFs from HTML content using PDFly's free REST API. Includes code examples in JavaScript, Python, PHP, and Go.",
-    date: "2026-03-08", readTime: "12 min",
-    tags: ["API", "Tutorial", "HTML to PDF"],
-  },
-  {
-    slug: "multi-language-pdf-generation",
-    title: "Hindi, Arabic & Chinese PDFs in the Browser — No Font Install",
-    excerpt: "Most PDF generators break on non-Latin scripts. The PDFly browser tool loads the right Noto font for Devanagari, Arabic and Simplified Chinese automatically. An honest look at what works and what doesn't yet.",
-    date: "2026-03-07", readTime: "10 min",
-    tags: ["Scripts", "Hindi", "Arabic", "Fonts"],
-  },
-  {
-    slug: "batch-pdf-generation-api",
-    title: "Batch PDF Generation: Create 5 Documents in One API Call",
-    excerpt: "Learn how to generate multiple PDFs simultaneously using PDFly's batch API. Perfect for invoices, certificates, reports.",
-    date: "2026-03-06", readTime: "8 min",
-    tags: ["API", "Batch", "Performance"],
-  },
-  {
-    slug: "pdf-templates-guide",
-    title: "15 PDF Templates: From Minimal to Corporate — Choose Your Style",
-    excerpt: "PDFly offers 15 professionally designed templates. Here's a detailed guide to each one and when to use them.",
-    date: "2026-03-05", readTime: "9 min",
-    tags: ["Templates", "Design", "Guide"],
-  },
-  {
-    slug: "free-pdf-api-developers",
-    title: "Free PDF Generation API for Developers — No Credit Card Required",
-    excerpt: "PDFly offers a completely free REST API for PDF generation. Get API keys, generate PDFs programmatically, build document workflows at zero cost.",
-    date: "2026-03-04", readTime: "7 min",
-    tags: ["Free", "API", "Developers"],
-  },
-  {
-    slug: "invoice-pdf-generation-tutorial",
-    title: "How to Generate Invoices as PDFs Automatically — Complete Tutorial",
-    excerpt: "Automate invoice generation with PDFly. Create professional invoices with custom templates and batch processing for billing systems.",
-    date: "2026-03-03", readTime: "11 min",
-    tags: ["Invoice", "Automation", "Tutorial"],
-  },
-  {
-    slug: "pdf-api-vs-puppeteer-wkhtmltopdf",
-    title: "PDFly API vs Puppeteer vs wkhtmltopdf — Which PDF Solution is Best?",
-    excerpt: "A comprehensive comparison of popular PDF generation methods. When to use each, pros and cons, performance benchmarks, and cost analysis.",
-    date: "2026-03-02", readTime: "13 min",
-    tags: ["Comparison", "Puppeteer", "wkhtmltopdf"],
-  },
-  {
-    slug: "pdf-generation-for-saas",
-    title: "Adding PDF Export to Your SaaS App — A Developer's Complete Guide",
-    excerpt: "Step-by-step guide to integrating PDF export functionality into your SaaS application using PDFly's REST API. React, Vue, and Node.js examples included.",
-    date: "2026-03-01", readTime: "14 min",
-    tags: ["SaaS", "Integration", "Guide"],
-  },
-  {
-    slug: "rtl-pdf-generation-arabic-hebrew",
-    title: "What Right-to-Left PDF Generation Actually Takes — And Where We Are",
-    excerpt: "Arabic and Urdu need more than flipped text: shaping, ligatures, and the bidi algorithm. Here's the real problem, and exactly how far PDFly gets today.",
-    date: "2026-02-28", readTime: "8 min",
-    tags: ["RTL", "Arabic", "Urdu", "Fonts"],
-  },
-  {
-    slug: "certificate-pdf-generation-bulk",
-    title: "Generate Bulk Certificates as PDFs — Event, Course & Award Certificates",
-    excerpt: "Create hundreds of personalized certificates in minutes. Perfect for online courses, events, workshops. Use templates or design custom layouts.",
-    date: "2026-02-27", readTime: "9 min",
-    tags: ["Certificates", "Bulk", "Education"],
-  },
-];
 const Blog = () => {
+  /*
+   * Posts come from /blog-index.json, written by scripts/postbuild.mjs from the
+   * same list that produced the prerendered HTML and the sitemap. They used to
+   * be a hardcoded array here, which silently stopped matching the moment the
+   * build started reading Firestore.
+   */
+  const [posts, setPosts] = useState<BlogPost[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadBlogPosts().then((p) => {
+      if (!cancelled) setPosts(sortByDate(p));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <SEOHead
@@ -136,12 +47,11 @@ const Blog = () => {
           name: "PDFly Blog",
           url: `${SITE_URL}/blog`,
           description: "Guides, tutorials, and tips for PDF generation by 3idhMinds.",
-          blogPost: blogPosts.map(p => ({
+          blogPost: (posts ?? []).map(p => ({
             "@type": "BlogPosting",
             headline: p.title,
             url: `${SITE_URL}/blog/${p.slug}`,
-            datePublished: p.date,
-            image: p.image,
+            datePublished: postDate(p),
             keywords: p.tags.join(", "),
             author: { "@type": "Organization", name: "3idhMinds" },
           })),
@@ -159,7 +69,7 @@ const Blog = () => {
         </motion.div>
 
         <div className="space-y-8">
-          {blogPosts.map((post, i) => (
+          {(posts ?? []).map((post, i) => (
             <motion.div key={post.slug} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card className="overflow-hidden glass hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 hover:-translate-y-1">
                 <div className="p-6">
@@ -174,8 +84,8 @@ const Blog = () => {
                   <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{post.excerpt}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {post.date}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.readTime}</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {postDate(post)}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.readMinutes} min</span>
                     </div>
                     <Link to={`/blog/${post.slug}`} className="text-sm text-primary hover:underline flex items-center gap-1">
                       Read more <ArrowRight className="w-3 h-3" />

@@ -77,7 +77,15 @@ async function fetchBlogPosts() {
       slug: p.slug,
       title: p.title,
       excerpt: p.excerpt,
+      // The body travels with the post now. It is written to
+      // dist/blog-index.json for the app and injected into each prerendered
+      // page for crawlers, so neither one has to go back to the API at runtime.
+      content: p.content ?? "",
       category: p.category ?? "",
+      tags: Array.isArray(p.tags) ? p.tags : [],
+      author: p.author ?? "3idhMinds",
+      publishAt: p.publishAt ?? null,
+      readMinutes: p.readMinutes ?? 5,
     }));
   } catch (err) {
     console.warn(
@@ -122,7 +130,7 @@ const esc = (s) =>
 
 const shell = readFileSync(join(dist, "index.html"), "utf8");
 
-function buildHtml({ path, title, description, noindex }) {
+function buildHtml({ path, title, description, noindex }, post = null) {
   const canonical = path === "/" ? SITE_ORIGIN : `${SITE_ORIGIN}${path}`;
   const t = esc(title);
   const d = esc(description);
@@ -174,10 +182,22 @@ function buildHtml({ path, title, description, noindex }) {
   // hidden from sighted users (React replaces #root on hydrate) but is real,
   // non-duplicated content matching the page's own metadata — not keyword
   // stuffing, and not text that contradicts what the rendered page says.
+  // A blog page ships its whole body, not just its excerpt. Only the title and
+  // description were injected before, which left the actual article invisible
+  // to anything that does not run JavaScript — on the pages where the text IS
+  // the product. `white-space:nowrap` is dropped for the same reason: it was
+  // fine for one line and wrong for an article.
+  const body = post?.content
+    ? post.content
+        .split(/\n{2,}/)
+        .map((para) => `<p>${esc(para.trim())}</p>`)
+        .join("")
+    : `<p>${d}</p>`;
+
   const noscript =
     `<div id="prerender-content" style="position:absolute;width:1px;height:1px;` +
-    `overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">` +
-    `<h1>${t}</h1><p>${d}</p></div>`;
+    `overflow:hidden;clip:rect(0 0 0 0)">` +
+    `<h1>${t}</h1>${body}</div>`;
   html = html.replace('<div id="root"></div>', `<div id="root"></div>\n    ${noscript}`);
 
   return html;
@@ -205,8 +225,29 @@ const allRoutes = [
 ];
 
 for (const route of allRoutes) {
-  writeRoute(route.path, buildHtml(route));
+  // Blog pages carry their own body, so the crawler sees the article and the
+  // app can hydrate from the same HTML without a second request.
+  const post = route.path.startsWith("/blog/")
+    ? blogPosts.find((p) => `/blog/${p.slug}` === route.path)
+    : null;
+  writeRoute(route.path, buildHtml(route, post));
 }
+
+/* ------------------------------------------------------------- blog data */
+/**
+ * The single source the app reads at runtime.
+ *
+ * Posts used to be a TypeScript array compiled into the bundle, so publishing
+ * meant editing code. Worse, once the build started reading Firestore the two
+ * drifted immediately: a post published through the API was prerendered with
+ * the right <title> and then rendered blank, because the React component was
+ * still looking the slug up in its own hardcoded map and not finding it.
+ * Measured on production before this fix.
+ *
+ * One file, written from the same list that produced the prerender and the
+ * sitemap, so all three cannot disagree.
+ */
+writeFileSync(join(dist, "blog-index.json"), JSON.stringify({ posts: blogPosts }), "utf8");
 
 /* ---------------------------------------------------------------- soft 404s */
 /**
