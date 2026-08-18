@@ -33,6 +33,7 @@
 import { createS3Provider } from "./s3Adapter.js";
 import { createFilenProvider } from "./filenAdapter.js";
 import { createFileToken } from "./fileToken.js";
+import { db } from "./firebase.js";
 
 /** Seconds a generated file stays retrievable once storage is attached. */
 export const RETENTION_SECONDS = Number(process.env.STORAGE_URL_TTL_SECONDS ?? 3600);
@@ -225,6 +226,77 @@ export function describeStorage(): StorageDisclosure {
  * Keys are namespaced per account and per day so a retention sweep can delete
  * by prefix, and so one user's objects are never guessable from another's.
  */
+/**
+ * Firestore collection recording what has been uploaded and when it expires.
+ *
+ * Without this there is no list of what to delete. The retention promise was
+ * therefore not being kept: the signed token expired after an hour so the link
+ * stopped working, but the object itself stayed in the provider indefinitely.
+ * The disclosure text said "permanently deleted", which made it a false claim
+ * rather than merely a missing feature.
+ */
+const STORED_FILES = "storedFiles";
+
+/**
+ * Deletes expired objects, then their index entries.
+ *
+ * ── Why this is opportunistic rather than a cron ──────────────────────────
+ * Vercel's Hobby plan runs cron jobs at daily granularity, which is useless for
+ * a one-hour retention window. So the sweep is triggered by traffic: every
+ * upload cleans up a small batch of whatever has already expired. Any account
+ * generating files keeps its own files pruned, and the work is spread out
+ * instead of arriving in one daily spike.
+ *
+ * The daily cron still exists as a backstop, for the case where nobody uploads
+ * anything for a while. Both paths call this same function.
+ *
+ * Bounded by `limit` so a backlog cannot make one PDF request slow. Deleting
+ * the object before the index entry is deliberate: if the process dies between
+ * the two, the entry is retried next sweep, whereas the reverse would orphan
+ * the object with nothing left pointing at it.
+ */
+export async function sweepExpired(limit = 25): Promise<{ deleted: number; failed: number }> {
+  const provider = storage();
+  if (!provider.persists) return { deleted: 0, failed: 0 };
+
+  const now = new Date().toISOString();
+  let snap;
+  try {
+    snap = await db()
+      .collection(STORED_FILES)
+      .where("expiresAt", "<=", now)
+      .limit(limit)
+      .get();
+  } catch (err) {
+    console.error("[storage] sweep query failed:", (err as Error).name);
+    return { deleted: 0, failed: 0 };
+  }
+
+  let deleted = 0;
+  let failed = 0;
+
+  for (const doc of snap.docs) {
+    const key = doc.data().key as string | undefined;
+    if (!key) {
+      await doc.ref.delete().catch(() => undefined);
+      continue;
+    }
+    try {
+      await provider.delete(key);
+      await doc.ref.delete();
+      deleted++;
+    } catch (err) {
+      console.error("[storage] sweep delete failed:", (err as Error).name);
+      failed++;
+    }
+  }
+
+  if (deleted || failed) {
+    console.log(`[storage] swept ${deleted} expired file(s), ${failed} failed`);
+  }
+  return { deleted, failed };
+}
+
 export async function persistIfPossible(
   uid: string,
   filename: string,
@@ -239,6 +311,21 @@ export async function persistIfPossible(
   const key = `${uid}/${day}/${rand}-${filename.replace(/[^\w.-]/g, "_")}`;
 
   const stored = await provider.upload(key, bytes, contentType);
+
+  if (stored) {
+    // Index it so the sweep knows this object exists and when it dies. Failing
+    // to index must not fail the request: the caller still has their file, and
+    // an unindexed object is a housekeeping problem, not a user-facing one.
+    await db()
+      .collection(STORED_FILES)
+      .add({ key, uid, expiresAt: stored.expiresAt, provider: provider.name, createdAt: new Date().toISOString() })
+      .catch((err) => console.error("[storage] could not index upload:", (err as Error).name));
+
+    // Fire and forget. Cleaning up someone else's expired files must never
+    // delay this response, so the promise is deliberately not awaited.
+    void sweepExpired(10).catch(() => undefined);
+  }
+
   if (!stored) {
     // Upload failed. Tell the truth rather than promising a link that 404s.
     return { ...describeStorage(), persisted: false, expires_at: null, retention_seconds: null,

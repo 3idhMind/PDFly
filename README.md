@@ -19,7 +19,7 @@
 
 ### 📝 Text to PDF
 - **15 Professional Templates** — Minimal, Professional, Creative, Modern, Classic, Elegant, Bold, Tech, Academic, Corporate, Artistic, Clean, Vibrant, Dark, Light
-- **Non-Latin scripts in the browser tool** — the web app detects the script and loads a matching Noto font on demand. Devanagari (Hindi, Marathi, Sanskrit, Nepali), Arabic script (Arabic, Persian, Urdu) and Simplified Chinese are covered today. Latin-script languages work everywhere with the built-in fonts.
+- **Non-Latin scripts in the browser tool** — the web app detects the script and loads a matching Noto font on demand. Devanagari (Hindi, Marathi, Sanskrit, Nepali) and Arabic script (Arabic, Persian, Urdu) are covered today. Latin-script languages work everywhere with the built-in fonts. CJK (Chinese, Japanese, Korean) is not covered on either surface: jsPDF cannot parse the OTF/CFF Noto CJK fonts, so that text falls back to Latin.
   <br>**The REST API is Latin-only.** It renders with the built-in Helvetica and does not embed fonts, so non-Latin text sent to the API will not render correctly. Use the browser tool for those scripts. ([tracked issue](#roadmap))
 - **HTML & Markdown** — Send raw HTML with CSS or plain text. Tables, headings, images, custom styles
 - **Batch Generation** — Generate up to 5 PDFs in a single API request

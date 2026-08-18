@@ -52,7 +52,7 @@ const apiIncludes = [
 const apiLimits = [
   "Responses are capped near 3 MB, so very large batches fail",
   "Generated files are returned inline and are not stored",
-  "Latin scripts only; the browser tools handle Hindi, Arabic and Chinese",
+  "Chinese, Japanese and Korean are not supported on either surface",
 ];
 
 export default function Pricing() {

@@ -2,7 +2,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { FieldValue } from "firebase-admin/firestore";
 import { db, adminAuth } from "./_lib/firebase.js";
 import { redact } from "./_lib/apiKeys.js";
-import { fail, ok, handledPreflight } from "./_lib/http.js";
+import { fail, ok, handledPreflight, operationFrom } from "./_lib/http.js";
+import { sweepExpired, storage } from "./_lib/storage.js";
 
 /**
  * Health probe and client crash reports.
@@ -72,6 +73,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method !== "GET") return fail(res, 405, "METHOD_NOT_ALLOWED", "Use GET or POST.");
 
+  /* ------------------------------------------------------- retention sweep */
+  /**
+   * GET /api/system?op=sweep
+   *
+   * Backstop for the opportunistic sweep that runs after every upload. That
+   * covers any account actively generating files; this covers a quiet period
+   * where nothing is uploaded and expired objects would otherwise sit around.
+   *
+   * Vercel's cron calls this daily, which is the finest granularity the Hobby
+   * plan offers. Retention is one hour, so the cron alone would be far too
+   * coarse — it is the safety net, not the mechanism.
+   *
+   * Protected by CRON_SECRET when one is set, because an unauthenticated sweep
+   * endpoint is a free way for anyone to make us do work. Vercel sends the
+   * secret as a Bearer token on scheduled invocations.
+   */
+  if (operationFrom(req) === "sweep") {
+    const secret = process.env.CRON_SECRET?.trim();
+    if (secret) {
+      const header = req.headers.authorization;
+      if (header !== `Bearer ${secret}`) return fail(res, 401, "UNAUTHENTICATED", "Not authorised.");
+    }
+    const result = await sweepExpired(200);
+    return ok(res, { swept: true, ...result });
+  }
+
   /* -------------------------------------------------------- health probe */
   /**
    * Each dependency is checked separately so a failure names the thing that is
@@ -118,6 +145,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   return ok(res, {
     status: services.every((s) => s.ok) ? "operational" : "degraded",
     services,
+    /*
+     * Lets the frontend show an accurate retention message instead of a
+     * blanket warning. `.persists` is a boolean the provider already exposes;
+     * deliberately not `.name`, which would re-leak the storage vendor the
+     * same way "firestore"/"auth" used to leak the backend (see D-020).
+     * Cheap: storage() just reads env vars once and caches the result, no
+     * extra network call.
+     */
+    storage: { persists: storage().persists },
     totalMs: Date.now() - started,
     checkedAt: new Date().toISOString(),
   });

@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { promises as dns } from "node:dns";
 import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
+import { assertPublicHttpsUrl } from "../pdfInput.js";
 
 /**
  * POST /api/images-to-pdf
@@ -35,103 +35,6 @@ const PAGE_SIZES: Record<string, [number, number]> = {
   A5: [419.53, 595.28],
   Tabloid: [792, 1224],
 };
-
-/* ------------------------------------------------------------------ SSRF guard */
-// Carried over verbatim in behaviour from supabase/functions/_shared/pdf-api.ts:
-// https only, no URL credentials, no redirects, blocked hostnames, and blocked
-// IPv4/IPv6 ranges checked against the *resolved* addresses so a public-looking
-// name cannot be rebound to something internal.
-
-function ipToLong(ip: string): number | null {
-  const parts = ip.split(".");
-  if (parts.length !== 4) return null;
-  let n = 0;
-  for (const p of parts) {
-    const v = Number(p);
-    if (!Number.isInteger(v) || v < 0 || v > 255) return null;
-    n = n * 256 + v;
-  }
-  return n;
-}
-
-function isBlockedIPv4(ip: string): boolean {
-  const n = ipToLong(ip);
-  if (n === null) return true; // unparseable means blocked, never "probably fine"
-  const inRange = (start: string, prefix: number) => {
-    const s = ipToLong(start)!;
-    const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
-    return (n & mask) === (s & mask);
-  };
-  return (
-    inRange("0.0.0.0", 8) ||
-    inRange("10.0.0.0", 8) ||
-    inRange("127.0.0.0", 8) ||
-    inRange("169.254.0.0", 16) || // link-local + AWS/GCP metadata 169.254.169.254
-    inRange("172.16.0.0", 12) ||
-    inRange("192.168.0.0", 16) ||
-    inRange("100.64.0.0", 10) || // CGNAT
-    inRange("192.0.0.0", 24) ||
-    inRange("198.18.0.0", 15) ||
-    inRange("224.0.0.0", 4) ||
-    inRange("240.0.0.0", 4)
-  );
-}
-
-function isBlockedIPv6(ip: string): boolean {
-  const s = ip.toLowerCase();
-  if (s === "::" || s === "::1") return true;
-  if (s.startsWith("fc") || s.startsWith("fd")) return true; // unique local
-  if (s.startsWith("fe80:")) return true; // link-local
-  if (s.startsWith("::ffff:")) return isBlockedIPv4(s.slice(7)); // v4-mapped
-  return false;
-}
-
-async function assertPublicHttpsUrl(raw: string, label: string) {
-  let u: URL;
-  try {
-    u = new URL(raw);
-  } catch {
-    throw new Error(`${label}: invalid URL`);
-  }
-  if (u.protocol !== "https:") throw new Error(`${label}: only https URLs are allowed`);
-  if (u.username || u.password) throw new Error(`${label}: URL credentials are not allowed`);
-
-  const host = u.hostname.replace(/^\[|\]$/g, "");
-  const lower = host.toLowerCase();
-  if (
-    lower === "localhost" ||
-    lower.endsWith(".localhost") ||
-    lower.endsWith(".internal") ||
-    lower.endsWith(".local") ||
-    lower === "metadata.google.internal"
-  ) {
-    throw new Error(`${label}: host is not allowed`);
-  }
-
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-    if (isBlockedIPv4(host)) throw new Error(`${label}: private/internal IP is not allowed`);
-    return;
-  }
-  if (host.includes(":")) {
-    if (isBlockedIPv6(host)) throw new Error(`${label}: private/internal IP is not allowed`);
-    return;
-  }
-
-  try {
-    const records = await Promise.allSettled([dns.resolve4(host), dns.resolve6(host)]);
-    const ips: string[] = [];
-    for (const r of records) if (r.status === "fulfilled") ips.push(...r.value);
-    if (ips.length === 0) throw new Error(`${label}: could not resolve host`);
-    for (const ip of ips) {
-      if (ip.includes(":") ? isBlockedIPv6(ip) : isBlockedIPv4(ip)) {
-        throw new Error(`${label}: host resolves to a private/internal address`);
-      }
-    }
-  } catch (e) {
-    if (e instanceof Error && e.message.startsWith(`${label}:`)) throw e;
-    throw new Error(`${label}: DNS resolution failed`);
-  }
-}
 
 /* ---------------------------------------------------------------- image input */
 

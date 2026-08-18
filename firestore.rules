@@ -111,6 +111,16 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // --------------------------------------------------------- storedFiles
+    // The retention index: one entry per uploaded object, with its expiry.
+    // Server-only in both directions. It maps storage keys to owners, so a
+    // client read would hand any signed-in user the key space of every other
+    // user, and the download path never needs it — the signed token already
+    // carries the key.
+    match /storedFiles/{docId} {
+      allow read, write: if false;
+    }
+
     // ----------------------------------------------------------- blogPosts
     // Document ID is the slug, which is also the public URL segment.
     //

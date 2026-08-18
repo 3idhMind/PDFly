@@ -1,6 +1,6 @@
 # PDFly by 3idhMinds
 
-> Free PDF and photo tools, browser-based. Compress a PDF or photo to an exact KB size (built for Indian exam/government portal uploads — SSC, UPSC, Aadhaar, PAN), merge, split, rotate, reorder, crop ID photos, convert images to/from PDF, and generate PDFs from text with 15 templates. Everything runs 100% client-side — files never leave the browser. A REST API exists for developers and renders Latin scripts only; Devanagari, Arabic and Chinese are supported in the browser tools via on-demand font loading.
+> Free PDF and photo tools, browser-based. Compress a PDF or photo to an exact KB size (built for Indian exam/government portal uploads — SSC, UPSC, Aadhaar, PAN), merge, split, rotate, reorder, crop ID photos, convert images to/from PDF, and generate PDFs from text with 15 templates. Everything runs 100% client-side — files never leave the browser. A REST API exists for developers and renders Latin scripts only; Devanagari and Arabic script are additionally supported in the browser tools via on-demand font loading, while CJK is not supported on either surface.
 
 ## Exam & portal upload requirements (primary-sourced)
 

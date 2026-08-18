@@ -54,7 +54,7 @@ export const InputSection = ({
       <Textarea
         value={value}
         onChange={(e) => onContentChange(e.target.value)}
-        placeholder="Enter your content here... Supports HTML, plain text, any language, and emojis 🎬🎥📋"
+        placeholder="Enter your content here... Supports HTML, plain text and emojis 🎬🎥📋"
         className={`min-h-[250px] resize-none text-sm ${fontClass} font-sans`}
       />
       <div className="mt-2 text-xs text-muted-foreground">

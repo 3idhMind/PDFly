@@ -23,6 +23,22 @@ export interface DocumentSection {
   content: string;
 }
 
+/**
+ * Languages offered in the picker.
+ *
+ * Every entry here must be one we can actually render. CJK was listed for a
+ * long time and never worked: jsPDF parses raw TrueType and the Noto CJK
+ * families ship as OTF/CFF, which its parser cannot read at all. Selecting
+ * 中文 produced a document with the text missing. An option that generates a
+ * broken file is worse than no option, so zh, ja and ko are gone until there
+ * is a font jsPDF can parse. Same reasoning for Hebrew and Thai, which were
+ * never listed.
+ *
+ * Devanagari and Arabic script are real: `clientPdfGenerator.ts` fetches a
+ * hinted Noto TTF on demand, and `api/_lib/fonts.ts` does the same server-side.
+ * Neither does complex-script shaping, so Devanagari conjuncts and Arabic
+ * joining are approximate. Disclosed in the UI rather than hidden.
+ */
 export const languages = [
   { code: 'auto', name: 'Auto Detect', native: '🌐 Auto' },
   { code: 'en', name: 'English', native: 'English' },
@@ -31,9 +47,6 @@ export const languages = [
   { code: 'es', name: 'Spanish', native: 'Español' },
   { code: 'fr', name: 'French', native: 'Français' },
   { code: 'de', name: 'German', native: 'Deutsch' },
-  { code: 'zh', name: 'Chinese', native: '中文' },
-  { code: 'ja', name: 'Japanese', native: '日本語' },
-  { code: 'ko', name: 'Korean', native: '한국어' },
   { code: 'ar', name: 'Arabic', native: 'العربية' },
   { code: 'ru', name: 'Russian', native: 'Русский' },
   { code: 'pt', name: 'Portuguese', native: 'Português' },

@@ -27,12 +27,36 @@ export interface QuotaVerdict {
  * One document read. A missing document means zero used — which is why there is
  * no monthly reset job: the month is the document ID, so August's counter
  * simply isn't July's.
+ *
+ * ── `cost` exists because the old check overshot on every batch ───────────
+ * This used to test `used < limit` and nothing else. A caller sitting at 99 of
+ * 100 who sent a 5-document request passed the gate and finished at 104: the
+ * check asked "may you generate a document" when the question was "may you
+ * generate five". Measured, not theorised. `cost` defaults to 1 so single-item
+ * callers are unchanged.
+ *
+ * ── What this still does not solve ────────────────────────────────────────
+ * This is a read, and the increment happens after the work in `recordUsage`.
+ * Two requests that arrive together both read the same `used` and both pass.
+ * The counter itself never loses a count — `recordUsage` uses atomic
+ * increments — so the overshoot is bounded by concurrency, not unbounded drift.
+ *
+ * Closing that window needs a transaction spanning check and increment, which
+ * means reserving quota before rendering and refunding it when a render fails.
+ * That is a real design change and it is tracked, not pretended away here. On a
+ * free tier where the penalty for overshoot is a few extra PDFs, the honest
+ * trade is to bound it and say so.
  */
-export async function checkQuota(uid: string): Promise<QuotaVerdict> {
+export async function checkQuota(uid: string, cost = 1): Promise<QuotaVerdict> {
   const snap = await usageRef(uid).get();
   const used = snap.exists ? (snap.data()?.pdfsGenerated ?? 0) : 0;
   const limit = FREE_TIER_MONTHLY_QUOTA;
-  return { allowed: used < limit, used, limit, remaining: Math.max(0, limit - used) };
+  return {
+    allowed: used + cost <= limit,
+    used,
+    limit,
+    remaining: Math.max(0, limit - used),
+  };
 }
 
 /**

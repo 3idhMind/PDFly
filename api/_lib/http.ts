@@ -6,6 +6,18 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
  *   { error: "MACHINE_CODE", message: "human sentence" }
  */
 export function fail(res: VercelResponse, status: number, error: string, message: string, extra?: Record<string, unknown>) {
+  /*
+   * A 429 carries a real `Retry-After` header, not just a number in the body.
+   *
+   * The retry hint was already being computed and put in the JSON, where only
+   * a client that knows our specific field name can see it. Every generic HTTP
+   * library, SDK retry policy and proxy looks for the header instead, so
+   * without it they all back off blindly or hammer straight through.
+   */
+  const retry = extra?.retry_after_seconds;
+  if (status === 429 && typeof retry === "number" && retry > 0) {
+    res.setHeader("Retry-After", String(Math.ceil(retry)));
+  }
   return res.status(status).json({ error, message, ...extra });
 }
 

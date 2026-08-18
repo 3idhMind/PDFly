@@ -16,7 +16,7 @@ const PrivacyPolicy = () => {
           <h1 className="text-3xl font-bold font-display text-foreground mb-2 flex items-center gap-2">
             <Shield className="w-7 h-7 text-primary" /> Privacy Policy
           </h1>
-          <p className="text-sm text-muted-foreground">Last updated: August 10, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: August 18, 2026</p>
         </div>
 
         {/* Three-lane privacy summary */}
@@ -52,10 +52,14 @@ const PrivacyPolicy = () => {
               <h2 className="font-semibold text-foreground">REST API (developers)</h2>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Files sent to the REST API are processed in memory and{" "}
-              <strong className="text-foreground">returned in the same response</strong> — there is
-              no persistent file storage today. Request metadata is logged for abuse prevention and
-              quota enforcement.
+              Files sent to the REST API's document-generation endpoints (merge, split, compress,
+              convert, generate) are always{" "}
+              <strong className="text-foreground">returned in the same response</strong>. When our
+              object-storage backend is configured, the same file is <strong className="text-foreground">
+              also kept for one hour</strong> behind a private, expiring download link on our own
+              domain, then permanently deleted — the response tells you which of the two happened.
+              When storage is not configured, nothing is retained at all. Either way, request
+              metadata is logged for abuse prevention and quota enforcement.
             </p>
           </Card>
         </div>
@@ -94,7 +98,7 @@ const PrivacyPolicy = () => {
               <strong className="text-foreground">Crash &amp; failure reports:</strong> if the app fails while you are using it, we record the error message, the page it happened on, the technical stack trace, your IP address and browser user agent so the maintainers can fix it. File names and file contents are never included in these reports.
             </p>
             <p className="text-muted-foreground leading-relaxed mb-4">
-              <strong className="text-foreground">REST API usage:</strong> request metadata (endpoint, timestamp, IP address, user ID, response status, processing time, bytes processed) is logged for security, abuse prevention, and quota enforcement. The file you send is processed in memory and returned in the same response; it is not stored.
+              <strong className="text-foreground">REST API usage:</strong> request metadata (endpoint, timestamp, IP address, user ID, response status, processing time, bytes processed) is logged for security, abuse prevention, and quota enforcement. What happens to the file you send is covered in "Document Retention" below — it depends on whether object storage is configured for that endpoint.
             </p>
           </section>
 
@@ -116,7 +120,17 @@ const PrivacyPolicy = () => {
               <br /><br />
               <strong className="text-foreground">Cloud fallback (opt-in):</strong> zero retention. The file exists only in server memory for the length of the request and is discarded when the response is sent. No bucket write, no database row, no content logging.
               <br /><br />
-              <strong className="text-foreground">REST API:</strong> files you send are processed in memory and returned in the same response; there is no persistent file storage today. Request logs are retained for up to 30 days for security analysis, then purged.
+              <strong className="text-foreground">REST API — anonymous fallback endpoint:</strong> zero retention, identical to the cloud fallback above. No storage write, no database row, no logging of contents.
+              <br /><br />
+              <strong className="text-foreground">REST API — authenticated document endpoints:</strong> the generated file is always returned directly in the response. Whether a copy is <em>also</em> kept afterwards depends on whether object storage is configured on our infrastructure at the time:
+              <br /><br />
+              <span className="text-foreground">If storage is configured</span> — the file is additionally written to our storage provider under a key scoped to your account, and a signed, time-limited download link on our own domain (never the storage provider's domain) is included in the response. That link and the underlying file both stop working <strong className="text-foreground">one hour</strong> after generation, at which point the file is permanently deleted. This is checked and enforced automatically: every new file upload triggers a cleanup pass that deletes anything past its one-hour mark, and a daily scheduled job catches anything a quiet period would otherwise leave behind.
+              <br /><br />
+              <span className="text-foreground">If storage is not configured</span> — nothing is written anywhere. The file exists only inside that one HTTP response; once it is received, we hold no copy at all.
+              <br /><br />
+              The API response always states plainly which of the two applies to that specific file, so you never have to guess whether you need to save it immediately.
+              <br /><br />
+              Request logs (metadata only, never file contents) are retained for up to 30 days for security analysis, then purged.
             </p>
           </section>
 
@@ -138,12 +152,28 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">6. Third-Party Services</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              We rely on cloud infrastructure providers for hosting, database, edge compute, and authentication — currently Firebase (Google) for sign-in and account data, and Vercel for hosting and the REST API. We use Google Tag Manager (basic web analytics, not ad targeting) to understand how the site is used. These providers process data only as directed by us and are bound by their own security commitments. We do not use a separate third-party email-sending service — account emails (e.g. password reset, when that sign-in method is enabled) are sent by Firebase's own auth email delivery.
+              We rely on cloud infrastructure providers for hosting, database, edge compute, and authentication — currently Firebase (Google) for sign-in and account data, and Vercel for hosting and the REST API. When the one-hour file backup described in "Document Retention" is active, a separate cloud storage provider holds that copy for the hour it exists; we deliberately don't name it here or anywhere in the product, on the same reasoning as not naming our other infrastructure in public status pages — it changes nothing about your privacy exposure and only helps someone looking for a specific vendor's misconfigurations to try. We use Google Tag Manager (basic web analytics, not ad targeting) to understand how the site is used. These providers process data only as directed by us and are bound by their own security commitments. We do not use a separate third-party email-sending service — account emails (e.g. password reset, when that sign-in method is enabled) are sent by Firebase's own auth email delivery.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">7. Your Rights</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-3">7. Who Can See What You Send Us</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              File contents you process are never manually reviewed by anyone — the pipeline is
+              fully automated, and the retention rules above are the whole story for how long a file
+              exists after you send it.
+              <br /><br />
+              One designated administrator account has access to two things beyond their own data:
+              messages submitted through our feedback form, and an internal error/activity log used
+              to diagnose problems (which endpoint failed, when, for which account — never file
+              contents). This access is enforced server-side against a single verified email
+              address; it cannot be granted to any other account, and an ordinary signed-in user or
+              API key has no path to it.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">8. Your Rights</h2>
             <ul className="text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1">
               <li>Access and export your account data</li>
               <li>Request deletion of your account and associated data</li>
@@ -152,16 +182,16 @@ const PrivacyPolicy = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">8. Changes to This Policy</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-3">9. Changes to This Policy</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               We may update this Privacy Policy from time to time. We will notify you of significant changes via email or a prominent notice on our service.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">9. Contact</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-3">10. Contact</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Questions about this policy? Reach us through the platform.
+              Questions about this policy, or a data deletion request: <a href="mailto:support@3idhmind.in" className="text-primary hover:underline">support@3idhmind.in</a>.
             </p>
           </section>
         </Card>

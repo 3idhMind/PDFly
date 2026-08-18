@@ -16,7 +16,7 @@ const TermsOfService = () => {
           <h1 className="text-3xl font-bold font-display text-foreground mb-2 flex items-center gap-2">
             <Scale className="w-7 h-7 text-primary" /> Terms of Service
           </h1>
-          <p className="text-sm text-muted-foreground">Last updated: August 10, 2026</p>
+          <p className="text-sm text-muted-foreground">Last updated: August 18, 2026</p>
         </div>
 
         <Card className="p-8 space-y-6 glass">
@@ -46,16 +46,16 @@ const TermsOfService = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-foreground mb-3">4. API Usage & Rate Limits</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-3">4. API Usage, Rate Limits & the Free Tier</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              API access is governed by rate limits (default: 60 requests per minute per API key). The PDF generation endpoint accepts up to 5 documents per request, with a maximum content size of 500,000 characters per document and a title limit of 200 characters. We reserve the right to adjust rate limits to ensure fair usage.
+              The free tier includes 100 generated documents per month and 60 requests per minute per API key. The PDF generation endpoint accepts up to 5 documents per request, with a maximum content size of 500,000 characters per document and a title limit of 200 characters. Exceeding either limit returns a clear error rather than a silent failure or a charge — there is currently no paid tier, and nothing is billed automatically. We reserve the right to adjust these limits to keep the service usable for everyone; if a paid tier is introduced in the future it will be announced and priced openly, not retroactively applied to usage that was free when you made it.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">5. Content Ownership</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              You retain full ownership of all content you submit. We do not claim any intellectual property rights over your content. Generated PDFs are your property. We process content solely to provide the service and do not use your content for any other purpose.
+              You retain full ownership of all content you submit. We do not claim any intellectual property rights over your content. Generated PDFs are your property. We process content solely to provide the service and do not use your content for any other purpose. How long a generated file exists on our servers afterwards, immediately discarded, or kept for one hour behind an expiring link, depends on the endpoint and our current infrastructure; see "Document Retention" in the <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link> for the exact behaviour.
             </p>
           </section>
 
@@ -90,7 +90,7 @@ const TermsOfService = () => {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">10. Contact</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              For questions about these Terms of Service, please reach out to us through our platform.
+              For questions about these Terms of Service: <a href="mailto:support@3idhmind.in" className="text-primary hover:underline">support@3idhmind.in</a>.
             </p>
           </section>
         </Card>

@@ -123,6 +123,7 @@ const EXPECT = {
   "/api/system": null,
   "/api/health": null,
   "/api/report-issue": null,
+  "/api/system?op=sweep": null,
   "/api/blog": null,
 
   "/api/account/me": "me",

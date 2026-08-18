@@ -81,5 +81,11 @@
       "source": "/api/file/:op*",
       "destination": "/api/file?op=:op*"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/system?op=sweep",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

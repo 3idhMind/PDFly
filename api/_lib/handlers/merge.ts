@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { promises as dns } from "node:dns";
 import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
+import { assertPublicHttpsUrl, assertLooksLikePdf } from "../pdfInput.js";
 
 /* ------------------------------------------------------------------- limits */
 
@@ -11,122 +11,6 @@ const MAX_PDF_BYTES = 20 * 1024 * 1024; // 20 MB per input PDF
 const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // 50 MB of input across the request
 const MAX_BODY_BYTES = 70 * 1024 * 1024; // hard body cap (base64 is ~33% larger)
 const MAX_MERGE_INPUTS = 20; // endpoint-specific; the platform-wide cap is 30
-
-/* ------------------------------------------------------------ PDF sniffing */
-
-/**
- * %PDF magic bytes. Checked on every input, including ones fetched from a URL:
- * without it any byte stream a caller can point us at gets handed to the parser.
- * Searched over the first KB rather than at offset 0 because some producers emit
- * leading whitespace or a BOM.
- */
-function assertLooksLikePdf(bytes: Uint8Array, label: string) {
-  const head = bytes.subarray(0, 1024);
-  for (let i = 0; i <= head.length - 4; i++) {
-    if (head[i] === 0x25 && head[i + 1] === 0x50 && head[i + 2] === 0x44 && head[i + 3] === 0x46) return;
-  }
-  throw new Error(`${label}: not a valid PDF file`);
-}
-
-/* -------------------------------------------------------------- SSRF guard */
-
-function ipToLong(ip: string): number | null {
-  const parts = ip.split(".");
-  if (parts.length !== 4) return null;
-  let n = 0;
-  for (const p of parts) {
-    const v = Number(p);
-    if (!Number.isInteger(v) || v < 0 || v > 255) return null;
-    n = n * 256 + v;
-  }
-  return n;
-}
-
-function isBlockedIPv4(ip: string): boolean {
-  const n = ipToLong(ip);
-  if (n === null) return true; // unparseable — refuse rather than guess
-  const inRange = (start: string, prefix: number) => {
-    const s = ipToLong(start)!;
-    const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
-    return (n & mask) === (s & mask);
-  };
-  return (
-    inRange("0.0.0.0", 8) ||
-    inRange("10.0.0.0", 8) ||
-    inRange("127.0.0.0", 8) ||
-    inRange("169.254.0.0", 16) || // link-local, incl. the 169.254.169.254 metadata address
-    inRange("172.16.0.0", 12) ||
-    inRange("192.168.0.0", 16) ||
-    inRange("100.64.0.0", 10) || // CGNAT
-    inRange("192.0.0.0", 24) ||
-    inRange("198.18.0.0", 15) ||
-    inRange("224.0.0.0", 4) ||
-    inRange("240.0.0.0", 4)
-  );
-}
-
-function isBlockedIPv6(ip: string): boolean {
-  const s = ip.toLowerCase();
-  if (s === "::" || s === "::1") return true;
-  if (s.startsWith("fc") || s.startsWith("fd")) return true; // unique local
-  if (s.startsWith("fe80:")) return true; // link-local
-  if (s.startsWith("::ffff:")) return isBlockedIPv4(s.slice(7)); // v4-mapped
-  return false;
-}
-
-/**
- * https only, no URL credentials, no private targets — checked both by hostname
- * and by every address the hostname resolves to. The DNS pass is the part that
- * matters: a public name can resolve to 169.254.169.254 and hand the caller the
- * platform's instance metadata. Redirects are refused at the fetch below, since
- * a followed redirect would land somewhere this function never inspected.
- */
-async function assertPublicHttpsUrl(raw: string, label: string) {
-  let u: URL;
-  try {
-    u = new URL(raw);
-  } catch {
-    throw new Error(`${label}: invalid URL`);
-  }
-  if (u.protocol !== "https:") throw new Error(`${label}: only https URLs are allowed`);
-  if (u.username || u.password) throw new Error(`${label}: URL credentials are not allowed`);
-
-  const host = u.hostname.replace(/^\[|\]$/g, "");
-  const lower = host.toLowerCase();
-  if (
-    lower === "localhost" ||
-    lower.endsWith(".localhost") ||
-    lower.endsWith(".internal") ||
-    lower.endsWith(".local") ||
-    lower === "metadata.google.internal"
-  ) {
-    throw new Error(`${label}: host is not allowed`);
-  }
-
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-    if (isBlockedIPv4(host)) throw new Error(`${label}: private/internal IP is not allowed`);
-    return;
-  }
-  if (host.includes(":")) {
-    if (isBlockedIPv6(host)) throw new Error(`${label}: private/internal IP is not allowed`);
-    return;
-  }
-
-  try {
-    const records = await Promise.allSettled([dns.resolve4(host), dns.resolve6(host)]);
-    const ips: string[] = [];
-    for (const r of records) if (r.status === "fulfilled") ips.push(...r.value);
-    if (ips.length === 0) throw new Error(`${label}: could not resolve host`);
-    for (const ip of ips) {
-      if (ip.includes(":") ? isBlockedIPv6(ip) : isBlockedIPv4(ip)) {
-        throw new Error(`${label}: host resolves to a private/internal address`);
-      }
-    }
-  } catch (e) {
-    if (e instanceof Error && e.message.startsWith(`${label}:`)) throw e;
-    throw new Error(`${label}: DNS resolution failed`);
-  }
-}
 
 /* ------------------------------------------------------------- input loader */
 

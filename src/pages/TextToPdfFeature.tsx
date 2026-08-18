@@ -131,10 +131,10 @@ const TextToPdfFeature = () => {
           <div className="container mx-auto px-4 max-w-4xl text-center">
             <h2 className="text-2xl font-bold font-display text-foreground mb-4">Languages In The Browser Tool</h2>
             <p className="text-sm text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Pick a language and the matching Noto font is fetched and embedded automatically — Devanagari, Arabic script and Simplified Chinese. Latin-script languages render with the built-in fonts. The REST API renders Latin scripts today.
+              Pick a language and the matching Noto font is fetched and embedded automatically, for Devanagari and Arabic script. Latin-script languages render with the built-in fonts. CJK is not covered yet, and the REST API renders Latin scripts only.
             </p>
             <div className="flex flex-wrap justify-center gap-2 mb-8">
-              {["English", "Hindi", "Marathi", "Sanskrit", "Nepali", "Arabic", "Persian", "Urdu", "Chinese (Simplified)", "Spanish", "French", "German", "Portuguese", "Italian"].map(lang => (
+              {["English", "Hindi", "Marathi", "Sanskrit", "Nepali", "Arabic", "Persian", "Urdu", "Spanish", "French", "German", "Portuguese", "Italian"].map(lang => (
                 <span key={lang} className="px-3 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">{lang}</span>
               ))}
             </div>

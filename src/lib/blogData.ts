@@ -9,15 +9,33 @@
  * `BlogPost.tsx` looked the slug up in its own map and did not find it.
  * Measured on production.
  *
- * So there is now exactly one runtime source. `scripts/postbuild.mjs` writes
- * `dist/blog-index.json` from the same list that produced the prerendered HTML
- * and the sitemap, which makes it impossible for the three to disagree.
+ * ── Round two: "live" turned out to mean "live after the next deploy" ────
+ * The first fix pointed the app at `dist/blog-index.json`, a file `postbuild`
+ * writes at build time. That solved the blank-page bug but reintroduced a
+ * version of the same drift: publishing a post through the API updated
+ * Firestore immediately, and a visitor browsing the site saw nothing new
+ * until someone ran a build and deployed it. The founder noticed this while
+ * testing and it is a real defect, not a misunderstanding — a "publish"
+ * button that does not publish is the bug.
  *
- * ── Why this is not a runtime data dependency for SEO ─────────────────────
- * Crawlers never wait for this. Each blog page already carries its full body
- * in the prerendered HTML, so the article is in the first response. The fetch
- * exists so a human gets the styled page after hydration, not so the content
- * exists at all.
+ * So the primary source is now the live endpoint, `GET /api/blog`, which
+ * reads Firestore on every call. A post is visible to every visitor the
+ * moment the write succeeds. No deploy, no commit, nothing to remember.
+ *
+ * `blog-index.json` still exists and is still written by `postbuild.mjs`, but
+ * it is now only a fallback for when the live endpoint is unreachable — a
+ * network blip should not blank the blog page, and stale content beats no
+ * content. It can lag Firestore by as much as one deploy cycle, which is
+ * exactly why it is the fallback and not the source.
+ *
+ * ── Why this is still fine for SEO ────────────────────────────────────────
+ * Crawlers never wait for either fetch. Each blog page already carries its
+ * full body inside the prerendered HTML from `postbuild.mjs`, so the article
+ * is in the very first response regardless of what happens after hydration.
+ * A brand new post's *prerendered* page and its sitemap entry still only
+ * appear after the next deploy — that is a separate, accepted limitation of
+ * a statically prerendered site, not the bug being fixed here. What this
+ * fixes is the live site showing the post to a human visitor at all.
  */
 
 export interface BlogPost {
@@ -40,15 +58,27 @@ let cache: Promise<BlogPost[]> | null = null;
  */
 export function loadBlogPosts(): Promise<BlogPost[]> {
   if (!cache) {
-    cache = fetch("/blog-index.json", { headers: { accept: "application/json" } })
+    cache = fetch("/api/blog", { headers: { accept: "application/json" } })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: { posts?: BlogPost[] }) => (Array.isArray(d.posts) ? d.posts : []))
-      .catch(() => {
-        // Reset so a transient failure does not poison every later call for
-        // the life of the page.
-        cache = null;
-        return [];
-      });
+      .then((d: { posts?: BlogPost[] }) => {
+        if (!Array.isArray(d.posts) || d.posts.length === 0) throw new Error("empty");
+        return d.posts;
+      })
+      .catch(() =>
+        // The live endpoint is down or briefly empty. Fall back to whatever
+        // was baked in at the last build rather than showing nothing.
+        fetch("/blog-index.json", { headers: { accept: "application/json" } })
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+          .then((d: { posts?: BlogPost[] }) => (Array.isArray(d.posts) ? d.posts : []))
+          .catch(() => []),
+      );
+
+    // Do not cache an empty result: an empty array is what both sources
+    // return on failure, and caching it would mean a working retry never
+    // happens for the rest of the page's life.
+    cache.then((posts) => {
+      if (posts.length === 0) cache = null;
+    });
   }
   return cache;
 }

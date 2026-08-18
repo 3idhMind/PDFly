@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { rateLimit } from "../quota.js";
+import { assertLooksLikePdf } from "../pdfInput.js";
 
 /**
  * Public, anonymous, zero-retention PDF fallback for the web UI.
@@ -22,20 +23,6 @@ const MAX_SPLIT_OUTPUTS = 60;
 
 /** Anonymous callers get far less headroom than an authenticated key. */
 const IP_LIMIT_PER_MIN = 12;
-
-const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46]; // %PDF
-
-/** Some producers emit leading whitespace/BOM before %PDF-, hence the scan. */
-function assertLooksLikePdf(bytes: Uint8Array, label: string) {
-  const head = bytes.subarray(0, 1024);
-  for (let i = 0; i <= head.length - 4; i++) {
-    if (
-      head[i] === PDF_MAGIC[0] && head[i + 1] === PDF_MAGIC[1] &&
-      head[i + 2] === PDF_MAGIC[2] && head[i + 3] === PDF_MAGIC[3]
-    ) return;
-  }
-  throw new Error(`${label}: not a valid PDF file`);
-}
 
 function clientIp(req: VercelRequest): string {
   const fwd = req.headers["x-forwarded-for"];
