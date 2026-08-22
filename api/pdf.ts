@@ -29,6 +29,9 @@ import { describeStorage } from "./_lib/storage.js";
  *   POST /api/pdf/convert/to-pages      one single-page PDF per page
  *   POST /api/pdf/convert/from-images   images to a single PDF
  *   POST /api/pdf/fallback              anonymous, zero-retention path
+ *   POST /api/pdf/upload                chunked upload, returns a `ref:` the
+ *                                       operations above accept in place of
+ *                                       inline base64
  *
  * The old flat paths (`/api/merge-pdf` and friends) still work: vercel.json
  * rewrites them here. They are not advertised, and they are not going away
@@ -52,6 +55,8 @@ const ROUTES: Record<string, () => Promise<{ default: unknown }>> = {
   "convert/to-images": () => import("./_lib/handlers/toImages.js"),
   "convert/from-images": () => import("./_lib/handlers/fromImages.js"),
   "fallback": () => import("./_lib/handlers/fallback.js"),
+  // How anything bigger than Vercel's ~4.5 MB body cap gets in at all.
+  "upload": () => import("./_lib/handlers/upload.js"),
 };
 
 type Handler = (req: VercelRequest, res: VercelResponse) => Promise<unknown> | unknown;

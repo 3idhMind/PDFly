@@ -7,7 +7,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TOOLS } from "@/lib/toolsList";
-import { Check, ArrowRight, Shield, Zap, Info, Minus } from "lucide-react";
+import { Check, ArrowRight, Shield, Zap, Building2, Mail, Minus } from "lucide-react";
 
 /**
  * Pricing.
@@ -19,40 +19,111 @@ import { Check, ArrowRight, Shield, Zap, Info, Minus } from "lucide-react";
  * feature list does the most damage, because it is the page a person reads
  * immediately before deciding whether to trust the product with a document.
  *
- * So: everything below is either shipped and verifiable, or explicitly marked
- * as not built. No "coming soon" on anything without a decision behind it, and
- * no invented limits.
+ * So: everything below is either shipped and verifiable, or handled by a human
+ * on request. No "coming soon" on anything without a decision behind it.
+ *
+ * ── Why two tiers say "Contact us" instead of a number ────────────────────
+ * Growth and Enterprise are set up by hand today. Printing a monthly price
+ * would imply a self-serve checkout that does not exist, and inventing one to
+ * look more established is exactly the failure described above. "Contact us"
+ * is what actually happens, so that is what the page says.
  *
  * ── Numbers ───────────────────────────────────────────────────────────────
- * The API quota and rate limit are the real defaults from api/_lib/quota.ts
- * (PDFLY_FREE_TIER_MONTHLY_QUOTA, PDFLY_RATE_LIMIT_PER_MIN). The ~3 MB
- * response ceiling is Vercel's body cap, not a policy choice, and it is stated
- * as a limitation rather than hidden.
+ * The quota and rate limit are the real defaults from api/_lib/quota.ts
+ * (PDFLY_FREE_TIER_MONTHLY_QUOTA, PDFLY_RATE_LIMIT_PER_MIN). Per-job size
+ * ceilings come from the tier table in api/_lib/tiers.ts — keep them in step.
  */
 
 const FREE_TIER_QUOTA = 100;
 const RATE_LIMIT_PER_MIN = 60;
+const SALES_EMAIL = "support@3idhmind.in";
 
-const browserIncludes = [
-  "Every tool, with no account required",
-  "No file size limit and no daily cap",
-  "Files never leave your device, so nothing is uploaded",
-  "No watermark on any output",
-  "Works offline once the page has loaded",
+/** mailto with the tier already in the subject, so the reply has context. */
+const mailto = (tier: string) =>
+  `mailto:${SALES_EMAIL}?subject=${encodeURIComponent(`PDFly ${tier} plan enquiry`)}`;
+
+interface Tier {
+  id: string;
+  name: string;
+  price: string;
+  priceNote: string;
+  tagline: string;
+  icon: typeof Shield;
+  featured?: boolean;
+  features: string[];
+  cta: { label: string; href: string; external?: boolean; variant?: "default" | "outline" };
+}
+
+const TIERS: Tier[] = [
+  {
+    id: "free",
+    name: "Free",
+    price: "₹0",
+    priceNote: "forever, no card",
+    tagline: "Every browser tool, plus an API tier for scripts and side projects.",
+    icon: Shield,
+    features: [
+      `All ${TOOLS.length} browser tools, no account needed`,
+      "No file size limit in the browser, ever",
+      "Files never leave your device in browser tools",
+      `${FREE_TIER_QUOTA} API documents per month`,
+      `${RATE_LIMIT_PER_MIN} API requests per minute`,
+      "10 MB per API job",
+      "Up to 10 API keys, revocable any time",
+      "No watermark on any output",
+    ],
+    cta: { label: "Open the tools", href: "/create" },
+  },
+  {
+    id: "growth",
+    name: "Growth",
+    price: "Contact us",
+    priceNote: "priced to your volume",
+    tagline: "For products and teams pushing real document volume through the API.",
+    icon: Zap,
+    featured: true,
+    features: [
+      "Everything in Free",
+      "1 GB per API job",
+      "Raised monthly document quota",
+      "Raised per-minute rate limit",
+      "Longer file retention window",
+      "Email support from the people who built it",
+    ],
+    cta: { label: "Talk to us", href: mailto("Growth"), external: true },
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: "Contact us",
+    priceNote: "dedicated setup",
+    tagline: "Jobs past 10 GB, or a deployment that has to be yours alone.",
+    icon: Building2,
+    features: [
+      "Everything in Growth",
+      "10 GB and above per job",
+      "Dedicated processing capacity",
+      "Custom retention and data handling terms",
+      "Dedicated support contact",
+      "Invoicing and a signed agreement",
+    ],
+    cta: { label: "Contact sales", href: mailto("Enterprise"), external: true, variant: "outline" },
+  },
 ];
 
-const apiIncludes = [
-  `${FREE_TIER_QUOTA} documents per month`,
-  `${RATE_LIMIT_PER_MIN} requests per minute`,
-  "Generate, merge, split, compress and convert",
-  "Up to 10 API keys, revocable at any time",
-  "No credit card, ever, on the free tier",
+/** Verified against api/_lib/handlers/* — every row here is a real endpoint. */
+const API_CAPABILITIES = [
+  "Text, HTML or Markdown to PDF, 15 templates",
+  "Merge, split, compress",
+  "PDF to images, images to PDF",
+  "Latin, Devanagari and Arabic script rendering",
+  "Signed download links on our own domain",
 ];
 
-const apiLimits = [
-  "Responses are capped near 3 MB, so very large batches fail",
-  "Generated files are returned inline and are not stored",
-  "Chinese, Japanese and Korean are not supported on either surface",
+const CURRENT_LIMITS = [
+  "Chinese, Japanese, Korean, Hebrew and Thai are not supported on either surface",
+  "Arabic renders correct glyphs but without bidirectional reordering",
+  "Generated files are deleted one hour after they are made",
 ];
 
 export default function Pricing() {
@@ -64,7 +135,7 @@ export default function Pricing() {
         <title>Pricing — Free PDF Tools and a Free API Tier | PDFly</title>
         <meta
           name="description"
-          content="Every PDFly browser tool is free with no account, no watermark and no limits. The REST API has a free tier of 100 documents a month. No paid plan exists yet."
+          content={`Every PDFly browser tool is free with no account, no watermark and no limits. The REST API has a free tier of ${FREE_TIER_QUOTA} documents a month with 10 MB jobs. Growth and Enterprise plans are priced on request.`}
         />
         <link rel="canonical" href={canonical} />
       </Helmet>
@@ -81,118 +152,133 @@ export default function Pricing() {
               transition={{ duration: 0.4 }}
             >
               <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
-                Free, and honest about it
+                Free where it costs us nothing
               </h1>
-              <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground sm:text-lg">
-                The browser tools cost nothing and need no account. The API has a free tier.
-                There is no paid plan, because we have not built one.
+              <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+                The browser tools run on your device, so they are free with no account and no
+                limits. The API runs on ours, so it has tiers. Nothing that is free today
+                becomes paid retroactively.
               </p>
             </motion.div>
           </div>
         </section>
 
         {/* ----------------------------------------------------------- tiers */}
-        <section className="container mx-auto max-w-5xl px-5 py-14">
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Browser tools */}
-            <Card className="flex flex-col p-7">
-              <div className="mb-1 flex items-center gap-2">
-                <Shield className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Browser tools
-                </span>
-              </div>
-              <h2 className="text-2xl font-bold text-foreground">Free</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                No account, no limits, nothing uploaded.
-              </p>
+        <section className="container mx-auto max-w-6xl px-5 py-14">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {TIERS.map((tier, i) => {
+              const Icon = tier.icon;
+              return (
+                <motion.div
+                  key={tier.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: i * 0.07 }}
+                  className="flex"
+                >
+                  <Card
+                    className={`relative flex w-full flex-col p-7 ${
+                      tier.featured ? "border-primary shadow-lg shadow-primary/5" : ""
+                    }`}
+                  >
+                    {tier.featured && (
+                      <span className="absolute -top-3 left-7 rounded-full bg-primary px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary-foreground">
+                        Most asked for
+                      </span>
+                    )}
 
-              <ul className="mt-6 flex-1 space-y-3">
-                {browserIncludes.map((item) => (
+                    <div className="mb-3 flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {tier.name}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-foreground">{tier.price}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{tier.priceNote}</p>
+
+                    <p className="mt-4 text-sm text-muted-foreground">{tier.tagline}</p>
+
+                    <ul className="mt-6 flex-1 space-y-3">
+                      {tier.features.map((item) => (
+                        <li key={item} className="flex gap-3 text-sm">
+                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Button
+                      asChild
+                      size="lg"
+                      variant={tier.cta.variant ?? "default"}
+                      className="mt-7 h-12 rounded-full"
+                    >
+                      {tier.cta.external ? (
+                        <a href={tier.cta.href}>
+                          <Mail className="mr-2 h-4 w-4" /> {tier.cta.label}
+                        </a>
+                      ) : (
+                        <Link to={tier.cta.href}>
+                          {tier.cta.label} <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      )}
+                    </Button>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* ------------------------------------------------ capabilities */}
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <Card className="p-7">
+              <h2 className="text-lg font-semibold text-foreground">What the API does</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                The same on every tier. Only the ceilings move.
+              </p>
+              <ul className="mt-5 space-y-3">
+                {API_CAPABILITIES.map((item) => (
                   <li key={item} className="flex gap-3 text-sm">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span className="text-muted-foreground">{item}</span>
                   </li>
                 ))}
               </ul>
-
-              <Button asChild size="lg" className="mt-7 h-12 rounded-full">
-                <Link to="/create">
-                  Open the tools <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </Card>
-
-            {/* API */}
-            <Card className="flex flex-col border-primary/30 p-7">
-              <div className="mb-1 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  REST API
-                </span>
-              </div>
-              <h2 className="text-2xl font-bold text-foreground">
-                Free tier
-                <span className="ml-2 align-middle text-sm font-normal text-muted-foreground">
-                  no card required
-                </span>
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                For scripts, servers and automation.
-              </p>
-
-              <ul className="mt-6 space-y-3">
-                {apiIncludes.map((item) => (
-                  <li key={item} className="flex gap-3 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span className="text-muted-foreground">{item}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Stated on the page itself, not buried in the docs. */}
-              <div className="mt-6 rounded-lg border border-border bg-muted/40 p-4">
-                <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Info className="h-3.5 w-3.5" /> Current limitations
-                </p>
-                <ul className="space-y-2">
-                  {apiLimits.map((item) => (
-                    <li key={item} className="flex gap-2 text-sm">
-                      <Minus className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                      <span className="text-muted-foreground">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Button asChild variant="outline" size="lg" className="mt-6 h-12 rounded-full">
+              <Button asChild variant="outline" className="mt-6 h-11 rounded-full">
                 <Link to="/docs">
                   Read the API docs <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </Card>
-          </div>
 
-          {/* ------------------------------------------------------ no paid tier */}
-          <Card className="mt-6 border-dashed p-7">
-            <h2 className="text-lg font-semibold text-foreground">Is there a paid plan?</h2>
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              Not yet, and we would rather say that than show an empty tier with invented
-              features. If usage grows past what the free tier can carry, a paid plan will
-              exist and will be priced in the open. Nothing that is free today becomes paid
-              retroactively.
-            </p>
-          </Card>
+            <Card className="p-7">
+              <h2 className="text-lg font-semibold text-foreground">What it does not do yet</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Stated here rather than discovered at 3am.
+              </p>
+              <ul className="mt-5 space-y-3">
+                {CURRENT_LIMITS.map((item) => (
+                  <li key={item} className="flex gap-3 text-sm">
+                    <Minus className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                    <span className="text-muted-foreground">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
         </section>
 
         {/* ------------------------------------------------- what free covers */}
         <section className="border-t border-border bg-muted/30">
           <div className="container mx-auto max-w-5xl px-5 py-14">
             <h2 className="text-xl font-bold text-foreground">
-              Every tool below is free, with no account
+              All {TOOLS.length} tools below are free, with no account
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              All of these run in your browser. Your files are never uploaded.
+              These run in your browser. Your files are never uploaded, and there is no size limit.
             </p>
 
             <div className="mt-7 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -219,20 +305,24 @@ export default function Pricing() {
           <div className="space-y-6">
             {[
               {
-                q: "Why is it free?",
-                a: "The browser tools cost us nothing to run. Your device does the work, so there is no server bill that scales with usage. The API does cost money to run, which is why it has a quota.",
+                q: "Why is so much of it free?",
+                a: "The browser tools cost us nothing to run. Your device does the work, so there is no server bill that scales with usage. The API does cost money to run, which is why it has tiers.",
+              },
+              {
+                q: "Why do Growth and Enterprise not show a price?",
+                a: "Because there is no self-serve checkout yet, and printing a number that you cannot actually pay would be theatre. Both are set up by hand today. Email us and you get a real answer from the person who built the thing.",
               },
               {
                 q: "Do you sell my files or my data?",
-                a: "No. Files processed by the browser tools never reach a server, so there is nothing to sell. The API processes files in memory and retains nothing after the response.",
+                a: "No. Files processed by the browser tools never reach a server, so there is nothing to sell. API files are deleted an hour after they are made.",
               },
               {
-                q: "What happens if I exceed the API quota?",
-                a: `Requests return a 429 with a clear error code until the month resets. Nothing is charged and nothing is silently dropped. The limit is ${FREE_TIER_QUOTA} documents a month and ${RATE_LIMIT_PER_MIN} requests a minute.`,
+                q: "What happens if I exceed the free API quota?",
+                a: `Requests return a 429 with a clear error code until the month resets. Nothing is charged and nothing is silently dropped. The free limits are ${FREE_TIER_QUOTA} documents a month, ${RATE_LIMIT_PER_MIN} requests a minute, and 10 MB per job.`,
               },
               {
                 q: "Can I use this commercially?",
-                a: "Yes, on both the browser tools and the free API tier, within the Terms of Service.",
+                a: "Yes, on the browser tools and on every API tier, within the Terms of Service.",
               },
               {
                 q: "Will the free tier be taken away?",
@@ -247,9 +337,9 @@ export default function Pricing() {
           </div>
 
           <div className="mt-10 rounded-lg border border-border p-5 text-sm text-muted-foreground">
-            Questions about pricing or usage limits:{" "}
-            <a href="mailto:support@3idhmind.in" className="text-primary hover:underline">
-              support@3idhmind.in
+            Questions about pricing, limits or a plan that fits:{" "}
+            <a href={mailto("plan")} className="text-primary hover:underline">
+              {SALES_EMAIL}
             </a>
           </div>
         </section>

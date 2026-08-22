@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
-import { assertPublicHttpsUrl, assertLooksLikePdf } from "../pdfInput.js";
+import { assertPublicHttpsUrl, assertLooksLikePdf, isUploadRef, resolveUploadRef } from "../pdfInput.js";
+import { deliverParts } from "../storage.js";
 
 /**
  * PDF to images.
@@ -30,7 +31,15 @@ const RASTER_FORMATS = new Set(["png", "jpg", "jpeg", "webp", "image"]);
 /** Load a PDF from base64 (data URI or raw) or an https URL. */
 async function loadPdf(input: unknown, label = "pdf"): Promise<Uint8Array> {
   if (typeof input !== "string" || !input) {
-    throw new Error(`${label}: must be a base64 string or https URL`);
+    throw new Error(`${label}: must be a base64 string, https URL or upload ref`);
+  }
+
+  // A ref from /api/pdf/upload: bytes already in storage, so no request-body
+  // size cap applies — the tier ceiling was enforced when they were uploaded.
+  if (isUploadRef(input)) {
+    const bytes = await resolveUploadRef(input, label);
+    assertLooksLikePdf(bytes, label);
+    return bytes;
   }
 
   if (input.startsWith("http://") || input.startsWith("https://")) {
@@ -129,7 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return fail(res, 400, "LIMIT_EXCEEDED", `Max ${MAX_PAGES} pages per request.`);
     }
 
-    const pages: Array<{ page: number; filename: string; size_bytes: number; data: string }> = [];
+    const pages: Array<{ page: number; name: string; bytes: Uint8Array }> = [];
     let producedBytes = 0;
 
     for (let i = 0; i < total; i++) {
@@ -151,23 +160,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
       }
 
-      // TODO(stage-3): switch to StorageProvider + temporary link
-      pages.push({
-        page: i + 1,
-        filename: `page_${i + 1}.pdf`,
-        size_bytes: out.length,
-        data: out.toString("base64"),
-      });
+      pages.push({ page: i + 1, name: `page_${i + 1}.pdf`, bytes: new Uint8Array(out) });
     }
 
     await recordUsage(caller.uid, { pdfs: total, apiCalls: 1, bytes: bytes.length + producedBytes });
 
+    // Inline while the whole set fits the response cap, signed links past it.
+    const delivered = await deliverParts(caller.uid, pages);
+
     return ok(res, {
       success: true,
       output_format: "pdf-per-page",
-      note: "Each page is returned as a base64 single-page PDF. For raster PNG/JPEG output, use the browser tool at /pdf-to-images.",
+      note: "Each page is returned as a single-page PDF, inline when the set is small enough and as a signed link when it is not. For raster PNG/JPEG output, use the browser tool at /pdf-to-images.",
       page_count: total,
-      pages,
+      // `filename` is what this endpoint has always called the field; `name` is
+      // what deliverParts returns. Emit the documented one and drop the other.
+      pages: delivered.map(({ name, ...rest }, i) => ({
+        page: pages[i].page,
+        filename: name,
+        ...rest,
+      })),
       processing_time_ms: Date.now() - started,
     });
   } catch (err) {

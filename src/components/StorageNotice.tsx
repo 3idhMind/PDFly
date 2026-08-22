@@ -97,8 +97,9 @@ export const StorageNotice = ({ className = "" }: { className?: string }) => {
           <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
             <li>The API is fully functional. This affects retrieval, not generation.</li>
             <li>
-              Responses are capped near 4.5&nbsp;MB. Larger batches fail at the platform rather
-              than returning one of our error codes.
+              A single request body is capped near 4.5&nbsp;MB by the platform. Use{" "}
+              <code className="font-mono text-xs">/api/pdf/upload</code> to send a larger file in
+              parts.
             </li>
             <li>Nothing you send is retained after the response is written.</li>
           </ul>

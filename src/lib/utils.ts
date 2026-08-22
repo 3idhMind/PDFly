@@ -18,3 +18,18 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * MB) return `${(bytes / MB).toFixed(1)} MB`;
   return `${(bytes / (1024 * MB)).toFixed(2)} GB`;
 }
+
+/**
+ * Adds `value` to a set, or removes it if already there, returning a new Set.
+ *
+ * The page-picker on Split, Rotate and Delete Pages each had its own copy of
+ * this, written as a ternary evaluated for its side effects — which works, and
+ * which every linter flags, and which is three places to fix if the selection
+ * behaviour ever changes. Returning a new Set rather than mutating is what
+ * makes it safe to call straight from a `setState` updater.
+ */
+export function toggleInSet<T>(set: ReadonlySet<T>, value: T): Set<T> {
+  const next = new Set(set);
+  if (!next.delete(value)) next.add(value);
+  return next;
+}

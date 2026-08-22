@@ -4,7 +4,7 @@ import { getIdToken } from "@/lib/firebase/auth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, Activity, AlertTriangle, Clock, RefreshCw, Bug } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
@@ -16,7 +16,12 @@ interface SecurityEvent {
   user_id: string | null;
   ip_address: string | null;
   user_agent: string | null;
-  details: any;
+  /**
+   * Whatever the emitting site attached. Deliberately not `any`: the shape
+   * varies by event_type, so the page reads the few fields it knows about
+   * through `detail()` and treats everything else as opaque.
+   */
+  details: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -32,8 +37,13 @@ interface ApiLog {
   created_at: string;
 }
 
-const severityColor = (s: string) =>
+/** Returns a Badge variant, not a loose string, so the call site needs no cast. */
+const severityColor = (s: string): BadgeProps["variant"] =>
   s === "critical" ? "destructive" : s === "warning" ? "default" : "secondary";
+
+/** One string field out of the details bag, or "" when absent or not a string. */
+const detail = (d: Record<string, unknown> | null, key: string): string =>
+  typeof d?.[key] === "string" ? (d[key] as string) : "";
 
 const FAILURE_TYPES = ["client_failure", "uncaught_error", "unhandled_rejection", "endpoint_error"];
 
@@ -145,19 +155,19 @@ export default function AdminSecurity() {
                   <div key={e.id} className="p-3 rounded-lg border text-sm space-y-1">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <Badge variant={severityColor(e.severity) as any}>{e.severity}</Badge>
+                        <Badge variant={severityColor(e.severity)}>{e.severity}</Badge>
                         <span className="font-mono text-xs">{e.event_type}</span>
-                        {e.details?.route && <span className="text-xs text-muted-foreground truncate">{e.details.route}</span>}
+                        {detail(e.details, "route") && <span className="text-xs text-muted-foreground truncate">{detail(e.details, "route")}</span>}
                       </div>
                       <span className="text-xs text-muted-foreground shrink-0">{new Date(e.created_at).toLocaleString()}</span>
                     </div>
-                    {e.details?.message && (
-                      <p className="text-xs text-foreground/80 break-words">{e.details.message}</p>
+                    {detail(e.details, "message") && (
+                      <p className="text-xs text-foreground/80 break-words">{detail(e.details, "message")}</p>
                     )}
-                    {e.details?.stack && (
+                    {detail(e.details, "stack") && (
                       <details className="text-xs text-muted-foreground">
                         <summary className="cursor-pointer">Stack trace</summary>
-                        <pre className="whitespace-pre-wrap mt-1">{e.details.stack}</pre>
+                        <pre className="whitespace-pre-wrap mt-1">{detail(e.details, "stack")}</pre>
                       </details>
                     )}
                   </div>
@@ -176,9 +186,9 @@ export default function AdminSecurity() {
                 {otherEvents.map((e) => (
                   <div key={e.id} className="flex items-center justify-between p-3 rounded-lg border text-sm">
                     <div className="flex items-center gap-3 min-w-0">
-                      <Badge variant={severityColor(e.severity) as any}>{e.severity}</Badge>
+                      <Badge variant={severityColor(e.severity)}>{e.severity}</Badge>
                       <span className="font-mono">{e.event_type}</span>
-                      {e.details?.endpoint && <span className="text-muted-foreground text-xs truncate">{e.details.endpoint}</span>}
+                      {detail(e.details, "endpoint") && <span className="text-muted-foreground text-xs truncate">{detail(e.details, "endpoint")}</span>}
                       {e.ip_address && <span className="text-muted-foreground text-xs">{e.ip_address}</span>}
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0 ml-2">{new Date(e.created_at).toLocaleString()}</span>

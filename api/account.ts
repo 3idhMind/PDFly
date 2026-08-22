@@ -5,10 +5,11 @@ import { fail, ok, handledPreflight, operationFrom } from "./_lib/http.js";
 /**
  * The caller's own account.
  *
- *   GET    /api/account/me      identity and whether this account is the admin
- *   GET    /api/account/keys    list this account's API keys
- *   POST   /api/account/keys    mint one, returned exactly once
+ *   GET    /api/account/me         identity and whether this account is the admin
+ *   GET    /api/account/keys       list this account's API keys
+ *   POST   /api/account/keys       mint one, returned exactly once
  *   DELETE /api/account/keys?id=<keyId>   revoke permanently
+ *   GET    /api/account/documents  API output still inside its retention window
  *
  * Grouped into one function for the same reason as the PDF namespace: each
  * file under `api/` costs one of the twelve Hobby slots. Key management is
@@ -30,6 +31,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return (mod.default as Handler)(req, res);
   }
 
+  if (key === "documents") {
+    const mod = await import("./_lib/handlers/documents.js");
+    return (mod.default as Handler)(req, res);
+  }
+
   if (key === "me") {
     const caller = await requireUser(req, res);
     if (!caller) return; // requireUser already answered
@@ -39,6 +45,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return fail(res, 404, "UNKNOWN_OPERATION", `No account route at /api/account/${key}.`, {
-    available: ["/api/account/me", "/api/account/keys"],
+    available: ["/api/account/me", "/api/account/keys", "/api/account/documents"],
   });
 }

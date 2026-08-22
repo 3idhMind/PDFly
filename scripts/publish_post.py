@@ -31,6 +31,15 @@ HOUSE STYLE — the API enforces these and will reject the post with a 400:
     no "in today's fast-paced", no "it's not just X, it's Y".
     Write plainly. Use a comma, a colon or a full stop instead of a dash.
 
+    Before publishing, also run the wider check the API does NOT enforce
+    (paragraph-length variance, unfilled {{template}} artifacts, stray
+    truncated suffixes like "-M" or "-S", double spaces, repeated words):
+
+        node scripts/humanize-check.mjs path/to/post.json
+
+    A clean run there is not proof the post reads as human-written, only
+    that it clears the mechanical checks. Read it yourself too.
+
 Only the standard library is used, so there is nothing to pip install.
 """
 

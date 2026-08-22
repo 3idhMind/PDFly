@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Play, ExternalLink, Loader2, KeyRound, Copy, Check } from "lucide-react";
 import { getIdToken } from "@/lib/firebase/auth";
-import { ApiMaintenanceNotice } from "@/components/ApiMaintenanceNotice";
 import { StorageNotice } from "@/components/StorageNotice";
 import { useToast } from "@/hooks/use-toast";
 
@@ -84,6 +83,56 @@ const ENDPOINTS: EndpointDef[] = [
 
 interface PreviewItem { label: string; url: string }
 
+/* --------------------------------------------------- reading a JSON response */
+
+/**
+ * The response is whatever the server sent, so it is read defensively rather
+ * than cast to a shape we assume. Every helper here answers "is this field
+ * usable", never "trust me, it is there".
+ */
+const asRecord = (v: unknown): Record<string, unknown> | null =>
+  v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+
+const str = (o: Record<string, unknown>, k: string): string =>
+  typeof o[k] === "string" ? (o[k] as string) : "";
+
+/**
+ * A blob URL, because an iframe cannot reliably render a `data:application/pdf`
+ * source — Chrome blocks it. Blob URLs are revoked when the previews change.
+ */
+function blobUrlFromBase64(b64: string): string | null {
+  try {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  } catch {
+    return null;
+  }
+}
+
+/** A file comes back inline when it is small and as a signed link when it is not. */
+function fileUrlOf(o: Record<string, unknown>): string | null {
+  const link = str(o, "download_url");
+  if (link) return link;
+  const inline = str(o, "pdf_base64") || str(o, "data");
+  return inline ? blobUrlFromBase64(inline) : null;
+}
+
+function items(
+  root: Record<string, unknown>,
+  key: string,
+  label: (item: Record<string, unknown>, index: number) => string,
+): PreviewItem[] {
+  const list = Array.isArray(root[key]) ? (root[key] as unknown[]) : [];
+  return list.flatMap((raw, i) => {
+    const item = asRecord(raw);
+    if (!item) return [];
+    const url = fileUrlOf(item);
+    return url ? [{ label: label(item, i), url }] : [];
+  });
+}
+
 const ApiPlayground = () => {
   const { toast } = useToast();
   const [selected, setSelected] = useState<EndpointKey>("merge-pdf");
@@ -96,6 +145,18 @@ const ApiPlayground = () => {
   const [status, setStatus] = useState<number | null>(null);
   const [responseText, setResponseText] = useState<string>("");
   const [previews, setPreviews] = useState<PreviewItem[]>([]);
+
+  /*
+   * Inline results are previewed through blob URLs, and a blob URL pins its
+   * data in memory until it is revoked. Replacing the list without revoking the
+   * old one leaks every PDF the user ever previewed for the life of the tab.
+   */
+  const replacePreviews = useCallback((next: PreviewItem[]) => {
+    setPreviews((prev) => {
+      for (const p of prev) if (p.url.startsWith("blob:")) URL.revokeObjectURL(p.url);
+      return next;
+    });
+  }, []);
   const [copied, setCopied] = useState(false);
 
   const endpoint = useMemo(() => ENDPOINTS.find(e => e.key === selected)!, [selected]);
@@ -106,32 +167,45 @@ const ApiPlayground = () => {
     setBody(JSON.stringify(def.sample, null, 2));
     setStatus(null);
     setResponseText("");
-    setPreviews([]);
+    replacePreviews([]);
   };
 
-  const extractPreviews = (key: EndpointKey, data: any): PreviewItem[] => {
-    if (!data) return [];
-    if (key === "generate-pdf") {
-      const arr = data.pdfs || [];
-      return arr.filter((p: any) => p?.url).map((p: any, i: number) => ({ label: p.title || `PDF ${i + 1}`, url: p.url }));
+  /*
+   * Turns a response into previewable URLs.
+   *
+   * This used to look for `data.url`, `data.pdfs` and `p.url`, none of which
+   * any endpoint has ever returned — generate answers with `documents`, and a
+   * file arrives either as `pdf_base64`/`data` inline or as `download_url` once
+   * it is too big to inline. So the preview pane was silently always empty.
+   * Reading the real field names, and building a blob URL for the inline case,
+   * is what makes it show anything at all.
+   */
+  const extractPreviews = (key: EndpointKey, data: unknown): PreviewItem[] => {
+    const root = asRecord(data);
+    if (!root) return [];
+
+    switch (key) {
+      case "generate-pdf":
+        return items(root, "documents", (d, i) => str(d, "title") || `PDF ${i + 1}`);
+      case "split-pdf":
+        return items(root, "pdfs", (d, i) => str(d, "name") || `Part ${i + 1}`);
+      case "pdf-to-images":
+        return items(root, "pages", (d, i) => str(d, "filename") || `Page ${i + 1}`);
+      case "merge-pdf":
+      case "compress-pdf": {
+        const url = fileUrlOf(root);
+        return url ? [{ label: key === "merge-pdf" ? "Merged PDF" : "Compressed PDF", url }] : [];
+      }
+      default:
+        return [];
     }
-    if (key === "merge-pdf" || key === "compress-pdf") {
-      return data.url ? [{ label: key === "merge-pdf" ? "Merged PDF" : "Compressed PDF", url: data.url }] : [];
-    }
-    if (key === "split-pdf") {
-      return (data.pdfs || []).map((p: any) => ({ label: p.name, url: p.url }));
-    }
-    if (key === "pdf-to-images") {
-      return (data.pages || []).map((p: any) => ({ label: `Page ${p.page}`, url: p.url }));
-    }
-    return [];
   };
 
   const run = async () => {
     setLoading(true);
     setStatus(null);
     setResponseText("");
-    setPreviews([]);
+    replacePreviews([]);
     try {
       let parsed: unknown;
       try {
@@ -166,10 +240,10 @@ const ApiPlayground = () => {
       });
       setStatus(res.status);
       const text = await res.text();
-      let json: any = null;
+      let json: unknown = null;
       try { json = JSON.parse(text); } catch { /* keep text */ }
       setResponseText(json ? JSON.stringify(json, null, 2) : text);
-      if (res.ok && json) setPreviews(extractPreviews(selected, json));
+      if (res.ok && json) replacePreviews(extractPreviews(selected, json));
     } catch (err) {
       setResponseText(String((err as Error).message || err));
       toast({ title: "Request failed", description: (err as Error).message, variant: "destructive" });
@@ -201,7 +275,6 @@ const ApiPlayground = () => {
           </p>
         </div>
 
-        <ApiMaintenanceNotice className="mb-8" />
         <StorageNotice className="mb-8" />
 
         <div className="grid gap-6 lg:grid-cols-[260px_1fr]">

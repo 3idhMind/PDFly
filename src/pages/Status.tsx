@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { SITE_URL } from "@/lib/config";
 import { useAuth } from "@/hooks/useAuth";
 import { getIdToken } from "@/lib/firebase/auth";
@@ -42,7 +42,7 @@ const Status = () => {
   const [checking, setChecking] = useState(false);
   const { user } = useAuth();
 
-  const checkServices = async () => {
+  const checkServices = useCallback(async () => {
     setChecking(true);
 
     // --- Infrastructure checks (no auth needed) ---
@@ -131,11 +131,14 @@ const Status = () => {
 
     setLastChecked(new Date());
     setChecking(false);
-  };
+    // `user` is the only outside value this reads: the auth probes only run for
+    // a signed-in visitor. Wrapped so the effect below can depend on it honestly
+    // rather than lying to the linter about what it uses.
+  }, [user]);
 
   useEffect(() => {
-    checkServices();
-  }, [user]);
+    void checkServices();
+  }, [checkServices]);
 
   const allServices = user ? [...infraServices, ...authServices] : infraServices;
   const overallStatus = allServices.every((s) => s.status === "operational")

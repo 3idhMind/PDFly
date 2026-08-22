@@ -1,4 +1,4 @@
-import { LogIn, LogOut, Menu, X, ChevronDown , KeyRound, TrendingUp} from "lucide-react";
+import { LogIn, LogOut, Menu, X, ChevronDown , KeyRound} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -169,18 +169,15 @@ export const Header = () => {
               {user ? (
                 /*
                   A signed-in user on mobile previously got exactly one control
-                  here: Sign out. Settings, API keys and Analytics existed only
-                  inside the desktop ProfileMenu dropdown, which never renders at
-                  this breakpoint — so on a phone the account had no reachable
-                  account area at all, and /settings could only be reached by
-                  typing the URL. Same destinations as the desktop menu.
+                  here: Sign out. The account area existed only inside the
+                  desktop ProfileMenu dropdown, which never renders at this
+                  breakpoint — so on a phone the account was unreachable, and
+                  /settings could only be opened by typing the URL. Usage,
+                  keys and downloads now all live behind this one button.
                 */
                 <div className="flex flex-col gap-2">
                   <Button className="w-full h-12 rounded-full text-base font-semibold" asChild onClick={closeMenu}>
-                    <Link to="/settings"><KeyRound className="w-4 h-4 mr-2" /> Settings &amp; API</Link>
-                  </Button>
-                  <Button variant="outline" className="w-full h-11 rounded-full" asChild onClick={closeMenu}>
-                    <Link to="/analytics"><TrendingUp className="w-4 h-4 mr-2" /> Analytics</Link>
+                    <Link to="/settings"><KeyRound className="w-4 h-4 mr-2" /> API dashboard</Link>
                   </Button>
                   <Button variant="ghost" className="w-full h-11 text-muted-foreground" onClick={() => { handleLogout(); closeMenu(); }}>
                     <LogOut className="w-4 h-4 mr-2" /> Sign out

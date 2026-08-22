@@ -10,11 +10,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.api.json",
-    "test": "node api/_lib/apiKeys.test.ts",
+    "test": "node api/_lib/apiKeys.test.ts && node api/_lib/uploadInput.test.ts",
     "smoke": "node --no-experimental-require-module scripts/smoke-api.mjs",
-    "verify": "npm run typecheck && npm test && npm run test:storage && npm run smoke && npm run routes && npm run build",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run test:storage && npm run smoke && npm run routes && npm run build",
     "routes": "node --no-experimental-require-module scripts/route-test.mjs",
-    "test:storage": "node scripts/storage-test.mjs"
+    "test:storage": "node scripts/storage-test.mjs",
+    "humanize": "node scripts/humanize-check.mjs"
   },
   "dependencies": {
     "@filen/sdk": "^0.4.2",
@@ -93,7 +94,6 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
-    "lovable-tagger": "^1.1.11",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",

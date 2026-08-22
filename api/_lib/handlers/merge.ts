@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
-import { assertPublicHttpsUrl, assertLooksLikePdf } from "../pdfInput.js";
+import { assertPublicHttpsUrl, assertLooksLikePdf, isUploadRef, resolveUploadRef } from "../pdfInput.js";
+import { deliverFile } from "../storage.js";
 
 /* ------------------------------------------------------------------- limits */
 
@@ -14,10 +15,18 @@ const MAX_MERGE_INPUTS = 20; // endpoint-specific; the platform-wide cap is 30
 
 /* ------------------------------------------------------------- input loader */
 
-/** Accepts a base64 string (with or without a data: prefix) or an https URL. */
+/** Accepts base64 (with or without a data: prefix), an https URL, or a `ref:`. */
 async function loadPdf(input: unknown, label: string): Promise<Uint8Array> {
   if (typeof input !== "string" || !input) {
-    throw new Error(`${label}: must be a base64 string or https URL`);
+    throw new Error(`${label}: must be a base64 string, https URL or upload ref`);
+  }
+
+  // A ref from /api/pdf/upload: bytes already in storage, no size cap to clear
+  // because they never travelled through a request body.
+  if (isUploadRef(input)) {
+    const bytes = await resolveUploadRef(input, label);
+    assertLooksLikePdf(bytes, label);
+    return bytes;
   }
 
   if (input.startsWith("http://") || input.startsWith("https://")) {
@@ -135,16 +144,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await recordUsage(caller.uid, { pdfs: 1, apiCalls: 1, bytes: totalIn });
 
-    // TODO(stage-3): switch to StorageProvider + temporary link
-    // The Supabase version uploaded to storage and returned a signed URL that
-    // expired in an hour. Object storage is not in place yet, so the bytes come
-    // back inline — same as /api/pdf-fallback. Callers get the file either way.
+    // Inline when it fits, a signed link when it does not. See deliverFile.
+    const delivery = await deliverFile(caller.uid, "merged.pdf", out);
+
     return ok(res, {
       success: true,
       filename: "merged.pdf",
       content_type: "application/pdf",
-      pdf_base64: Buffer.from(out).toString("base64"),
-      size_bytes: out.length,
+      ...delivery,
       pages_merged: merged.getPageCount(),
       inputs: pdfs.length,
       processing_time_ms: ms,

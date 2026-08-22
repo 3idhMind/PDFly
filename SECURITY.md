@@ -37,8 +37,9 @@ If you discover a security vulnerability in PDFly, please report it responsibly:
   bundle and readable by any visitor — that is correct for Firebase *web* config. The
   service-account credentials (`FIREBASE_PRIVATE_KEY` and friends) are server-only and must
   never gain a `VITE_` prefix.
-- **Never hardcode URLs** — use `SITE_URL` from `src/lib/config.ts`, or `SITE_ORIGIN` from
-  `src/lib/routeMeta.ts` for anything SEO-facing.
+- **Never hardcode URLs or limits.** Use `SITE_URL` from `src/lib/config.ts` for anything
+  SEO-facing, and `api/_lib/tiers.ts` for any size or quota figure you show a user. Both
+  exist so a value cannot be right in one place and stale in another.
 - **Validate all inputs** — both client-side and in the `api/` functions.
 - **Firestore rules are the access control.** Any new collection needs a matching rule in
   `firestore.rules`; a collection with no rule is not "default private" in a useful sense —
@@ -56,17 +57,39 @@ If you discover a security vulnerability in PDFly, please report it responsibly:
   creation and never persisted; only a short display prefix is kept.
 - **Serverless functions**: the Vercel Functions under `api/` authenticate the caller, apply
   per-key rate limits and monthly quotas, validate magic bytes on uploaded files, and guard
-  URL inputs against SSRF (including DNS-rebinding checks).
+  URL inputs against SSRF (including DNS-rebinding checks). The SSRF guard lives in one
+  shared module, `api/_lib/pdfInput.ts`, rather than being pasted into each handler —
+  duplicated guards are how one endpoint quietly misses the next fix.
+- **Download links**: HMAC-signed with an embedded expiry, verified with no database read.
+  Storage keys begin with the owner's uid, so an unsigned key would suggest the shape of
+  everyone else's. Invalid, tampered and expired tokens all answer 404 so probing cannot
+  distinguish them.
+- **Retention**: files generated through the API are deleted once their TTL passes — the
+  object itself, not merely the link. Verified end to end against the live backend by
+  `scripts/retention-live-test.mjs`.
 - **Error logging**: errors are logged by name only — never request bodies, file contents,
   or key material.
 
 ### Known gaps, stated honestly
 
-- The REST API endpoints under `api/` were ported from the previous Deno/Supabase
-  implementation and their adversarial review pass has **not** completed. Treat the API as
-  pre-release; the browser tools are the supported surface.
-- API responses currently return PDFs inline as base64 rather than via expiring signed
-  storage URLs. Object storage is planned and tracked in-code as `TODO(stage-3)`.
+- **No independent security review has been done.** The endpoints under `api/` were
+  ported from an earlier Deno implementation, and while individual areas have been fixed
+  as problems were found (SSRF, magic-byte validation, key hashing, token signing), no
+  adversarial pass over the whole surface has happened. The browser tools remain the
+  surface with the smallest attack area, because they involve no server at all.
+- **Rate limiting is per-instance, not global.** It lives in process memory, so a caller
+  spread across several warm serverless instances can exceed the per-minute limit by
+  roughly that factor. This is a deliberate trade: the alternative costs a database read
+  and write on every request. The monthly quota *is* authoritative and shared. See the
+  note in `api/_lib/quota.ts`.
+- **The anonymous upload path is bounded by IP.** An IP is a weak identity — carriers NAT
+  many users behind one, and addresses rotate. It is a speed bump against casual scripted
+  abuse, not an access control. No account data is reachable without a credential.
+- **Storage credentials are account-wide.** The Filen adapter authenticates with an
+  account email and password, which grants the whole account rather than one scoped
+  bucket. A dedicated account is used for this and nothing else. The S3 adapter, which
+  supports properly scoped keys, is implemented and can be switched to by setting the
+  `STORAGE_*` variables instead.
 
 ## Scope
 

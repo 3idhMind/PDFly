@@ -135,8 +135,9 @@ const ROUTE_MATRIX = {
     ["convert", "to-images"],
     ["convert", "from-images"],
     ["fallback"],
+    ["upload"],
   ],
-  account: [["me"], ["keys"]],
+  account: [["me"], ["keys"], ["documents"]],
   admin: [["feedback"], ["events"], ["activity"], ["blog"]],
 };
 

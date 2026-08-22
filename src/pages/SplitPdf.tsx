@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileDown, Loader2, Scissors, Plus, X, CloudCog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toggleInSet } from "@/lib/utils";
 
 type Mode = "every" | "pick" | "ranges";
 
@@ -71,13 +72,7 @@ const SplitPdf = () => {
 
   const outputCount = ranges ? ranges.split(",").filter((s) => s.trim()).length : 0;
 
-  const togglePage = (n: number) => {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      next.has(n) ? next.delete(n) : next.add(n);
-      return next;
-    });
-  };
+  const togglePage = (n: number) => setPicked((prev) => toggleInSet(prev, n));
 
   const download = (name: string, blob: Blob) => {
     const url = URL.createObjectURL(blob);

@@ -24,7 +24,14 @@ export async function pdfToImages(
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
     const ctx = canvas.getContext("2d")!;
-    await page.render({ canvas, canvasContext: ctx, viewport } as any).promise;
+    // `canvas` is accepted at runtime but missing from this pdf.js release's
+    // RenderParameters, so the argument is widened to the function's own
+    // parameter type rather than to `any` — a genuinely wrong field still fails.
+    await page.render({
+      canvas,
+      canvasContext: ctx,
+      viewport,
+    } as Parameters<typeof page.render>[0]).promise;
     const blob: Blob = await new Promise((resolve) =>
       canvas.toBlob(
         (b) => resolve(b!),

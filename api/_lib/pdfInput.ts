@@ -1,4 +1,6 @@
 import { promises as dns } from "node:dns";
+import { verifyFileToken } from "./fileToken.js";
+import { storage } from "./storage.js";
 
 /**
  * Shared input-validation for every handler that accepts a PDF (or fetches one
@@ -111,6 +113,45 @@ export async function assertPublicHttpsUrl(raw: string, label: string) {
     if (e instanceof InputError) throw e;
     throw new InputError(`${label}: DNS resolution failed`);
   }
+}
+
+/** An input of this shape came from /api/pdf/upload rather than the request body. */
+export const UPLOAD_REF_PREFIX = "ref:";
+
+export function isUploadRef(input: string): boolean {
+  return input.startsWith(UPLOAD_REF_PREFIX);
+}
+
+/**
+ * Resolves an upload reference to bytes, server-side.
+ *
+ * ── Why a ref and not simply an https URL ─────────────────────────────────
+ * The chunked uploader could hand back a normal `/api/file/<token>` link and
+ * every handler would already accept it, since they all fetch https URLs. That
+ * costs an HTTP round trip out to our own CDN and back into another function
+ * just to read bytes this deployment can already reach, and it drags the
+ * response through Vercel's 4.5 MB body cap on the way. Resolving through the
+ * storage adapter skips both.
+ *
+ * The token is the same HMAC used for downloads, so a ref cannot be forged or
+ * pointed at another account's key, and it expires on its own. That is also why
+ * the SSRF guard does not apply here: the caller never supplies a destination,
+ * only a signature we minted.
+ */
+export async function resolveUploadRef(input: string, label: string): Promise<Uint8Array> {
+  const verified = verifyFileToken(input.slice(UPLOAD_REF_PREFIX.length));
+  if (!verified) {
+    throw new InputError(`${label}: upload reference is invalid or has expired`);
+  }
+  const provider = storage();
+  if (!provider.download) {
+    throw new InputError(`${label}: this deployment cannot read uploaded files back`);
+  }
+  const bytes = await provider.download(verified.key);
+  if (!bytes) {
+    throw new InputError(`${label}: the uploaded file is no longer available`);
+  }
+  return new Uint8Array(bytes);
 }
 
 /**

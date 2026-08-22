@@ -37,3 +37,9 @@ dist-ssr
 # See _internal/DECISIONS.md D-008.
 .rw/
 .commit-message.txt
+
+# Build scratch. scripts/storage-test.mjs and scripts/retention-live-test.mjs
+# compile the API to these with tsc and delete them again; a crashed run can
+# leave one behind, and neither is source.
+.storage/
+.retention/

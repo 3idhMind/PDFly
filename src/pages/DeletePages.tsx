@@ -6,6 +6,7 @@ import { useProcessingPlan } from "@/hooks/useProcessingPlan";
 import { Button } from "@/components/ui/button";
 import { FileDown, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toggleInSet } from "@/lib/utils";
 
 const DeletePages = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -27,13 +28,7 @@ const DeletePages = () => {
     })();
   }, [files]);
 
-  const togglePage = (n: number) => {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      next.has(n) ? next.delete(n) : next.add(n);
-      return next;
-    });
-  };
+  const togglePage = (n: number) => setPicked((prev) => toggleInSet(prev, n));
 
   const remaining = pageCount !== null ? pageCount - picked.size : null;
 

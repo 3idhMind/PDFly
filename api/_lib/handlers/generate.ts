@@ -778,11 +778,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         break;
       }
 
-      // TODO(stage-3): switch to StorageProvider + temporary link
-      // Until object storage exists the bytes ride back inside the JSON, which
-      // is also why the practical batch size is far below the 20MB cap here:
-      // base64 adds a third, and the platform caps a serverless response well
-      // under that. A signed link removes both constraints.
+      // Storage is live, so a document too large to inline comes back as a
+      // signed link instead of base64 and the response cap stops binding. The
+      // batch size is still bounded by memory, not by the wire.
       /*
        * Uploaded when a bucket is configured, and the file is returned inline
        * either way. Storage is a backup that adds a retrievable link, never a

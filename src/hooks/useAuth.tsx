@@ -66,6 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/*
+ * Provider and hook in one file is the idiomatic React context shape, and
+ * splitting them would leave a two-line module importing the context from here
+ * anyway. The cost is that editing this file does a full reload instead of a
+ * hot one during development, which is a fair trade for keeping the pairing
+ * obvious. Disabled narrowly so the lint gate stays at zero and stays worth
+ * reading.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthState {
   return useContext(AuthContext);
 }

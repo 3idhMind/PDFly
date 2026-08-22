@@ -104,7 +104,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const pages = await doc.copyPages(src, src.getPageIndices());
         pages.forEach((p) => doc.addPage(p));
       }
-      // TODO(stage-3): switch to StorageProvider + temporary link
       out.push({
         name: "merged.pdf",
         type: "application/pdf",
@@ -128,8 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           group.length === 1
             ? `p${group[0] + 1}`
             : `p${group[0] + 1}-${group[group.length - 1] + 1}`;
-        // TODO(stage-3): switch to StorageProvider + temporary link
-        out.push({
+          out.push({
           name: `${base}_${label}.pdf`,
           type: "application/pdf",
           data: Buffer.from(await doc.save()).toString("base64"),
@@ -149,7 +147,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // canvas. Server-side we perform the lossless structure pass and report
       // honestly whether the caller's target was reached.
       const target = Number(options.targetBytes ?? 0);
-      // TODO(stage-3): switch to StorageProvider + temporary link
       out.push({
         name: decoded[0].name.replace(/\.pdf$/i, "_compressed.pdf"),
         type: "application/pdf",
@@ -168,7 +165,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const page = doc.addPage([img.width, img.height]);
         page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
       }
-      // TODO(stage-3): switch to StorageProvider + temporary link
       out.push({
         name: "images.pdf",
         type: "application/pdf",

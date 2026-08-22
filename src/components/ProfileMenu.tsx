@@ -12,7 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  BookOpen, TrendingUp, Activity, Newspaper, KeyRound,
+  BookOpen, Activity, Newspaper, KeyRound,
   LogOut, ShieldCheck,
 } from "lucide-react";
 import type { User } from "firebase/auth";
@@ -77,17 +77,17 @@ export const ProfileMenu = ({ user }: Props) => {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          {/* One entry, not three. "Profile & Settings", "API Keys" and
+          {/* One entry, not four. "Profile & Settings", "API Keys" and
               "Recent Documents" were three menu items that all opened the same
-              page — the last two only differed by a #hash. Three labels for one
-              destination reads as broken navigation, because it is. */}
+              page — the last two only differed by a #hash. Analytics was a
+              fourth route holding one chart. Three labels for one destination
+              reads as broken navigation, because it is. */}
           <DropdownMenuItem asChild>
-            <Link to="/settings"><KeyRound className="w-4 h-4 mr-2" /> Settings &amp; API keys</Link>
+            <Link to="/settings"><KeyRound className="w-4 h-4 mr-2" /> API dashboard</Link>
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem asChild><Link to="/analytics"><TrendingUp className="w-4 h-4 mr-2" /> Analytics</Link></DropdownMenuItem>
           <DropdownMenuItem asChild><Link to="/docs"><BookOpen className="w-4 h-4 mr-2" /> API Documentation</Link></DropdownMenuItem>
           <DropdownMenuItem asChild><Link to="/status"><Activity className="w-4 h-4 mr-2" /> Status</Link></DropdownMenuItem>
           <DropdownMenuItem asChild><Link to="/blog"><Newspaper className="w-4 h-4 mr-2" /> Blog</Link></DropdownMenuItem>

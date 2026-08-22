@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
-import { assertPublicHttpsUrl, assertLooksLikePdf, InputError } from "../pdfInput.js";
+import { assertPublicHttpsUrl, assertLooksLikePdf, InputError, isUploadRef, resolveUploadRef } from "../pdfInput.js";
+import { deliverParts } from "../storage.js";
 
 /**
  * POST /api/split-pdf   { pdf: base64|https URL, ranges: "1-3,5,7-9" }
@@ -28,7 +29,15 @@ const FETCH_TIMEOUT_MS = 15_000;
 /** Accepts base64 (with or without a data: prefix) or a public https URL. */
 async function loadPdf(input: unknown, label = "pdf"): Promise<Uint8Array> {
   if (typeof input !== "string" || !input) {
-    throw new InputError(`${label}: must be a base64 string or https URL`);
+    throw new InputError(`${label}: must be a base64 string, https URL or upload ref`);
+  }
+
+  // A ref from /api/pdf/upload: bytes already in storage, so no request-body
+  // size cap applies — the tier ceiling was enforced when they were uploaded.
+  if (isUploadRef(input)) {
+    const bytes = await resolveUploadRef(input, label);
+    assertLooksLikePdf(bytes, label);
+    return bytes;
   }
 
   if (input.startsWith("http://") || input.startsWith("https://")) {
@@ -138,7 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return fail(res, 400, "LIMIT_EXCEEDED", `Maximum ${MAX_SEGMENTS} output segments per request.`);
     }
 
-    const pdfs: Array<{ name: string; data: string; size_bytes: number; pages: number }> = [];
+    const pdfs: Array<{ name: string; bytes: Uint8Array; pages: number }> = [];
     let totalOut = 0;
 
     for (const group of groups) {
@@ -163,14 +172,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? `p${group[0] + 1}`
         : `p${group[0] + 1}-${group[group.length - 1] + 1}`;
 
-      // TODO(stage-3): switch to StorageProvider + temporary link
-      // Supabase Storage is gone and its replacement is not built yet, so the
-      // bytes ride back in the response. Callers get the file immediately; the
-      // trade-off is the 50MB cap above and no `expires_in_seconds` to report.
       pdfs.push({
         name: `split_${label}.pdf`,
-        data: Buffer.from(outBytes).toString("base64"),
-        size_bytes: outBytes.length,
+        bytes: outBytes,
         pages: group.length,
       });
     }
@@ -181,10 +185,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       bytes: bytes.length + totalOut,
     });
 
+    // Inline while the whole set fits the response cap, signed links past it.
+    const delivered = await deliverParts(caller.uid, pdfs);
+
     return ok(res, {
       success: true,
       source_pages: total,
-      pdfs,
+      pdfs: delivered.map((d, i) => ({ ...d, pages: pdfs[i].pages })),
       processing_time_ms: Date.now() - start,
     });
   } catch (err) {

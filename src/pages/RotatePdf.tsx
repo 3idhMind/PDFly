@@ -6,6 +6,7 @@ import { useProcessingPlan } from "@/hooks/useProcessingPlan";
 import { Button } from "@/components/ui/button";
 import { FileDown, Loader2, RotateCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toggleInSet } from "@/lib/utils";
 
 const RotatePdf = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -31,13 +32,7 @@ const RotatePdf = () => {
     })();
   }, [files]);
 
-  const togglePage = (n: number) => {
-    setPicked((prev) => {
-      const next = new Set(prev);
-      next.has(n) ? next.delete(n) : next.add(n);
-      return next;
-    });
-  };
+  const togglePage = (n: number) => setPicked((prev) => toggleInSet(prev, n));
 
   const handleRotate = async () => {
     if (!files[0]) return;

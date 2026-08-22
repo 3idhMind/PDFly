@@ -98,12 +98,16 @@ const buckets = new Map<string, Window>();
  *
  * The monthly quota above is the hard, authoritative limit and IS shared state.
  */
-export function rateLimit(subject: string, limitPerMin: number): { ok: boolean; retryAfter: number } {
+export function rateLimit(
+  subject: string,
+  limitPerMin: number,
+  windowMs = 60_000,
+): { ok: boolean; retryAfter: number } {
   const now = Date.now();
   const bucket = buckets.get(subject);
 
   if (!bucket || now >= bucket.resetAt) {
-    buckets.set(subject, { count: 1, resetAt: now + 60_000 });
+    buckets.set(subject, { count: 1, resetAt: now + windowMs });
     // Cheap unbounded-growth guard: a warm instance can't accumulate forever.
     if (buckets.size > 10_000) {
       for (const [k, v] of buckets) if (now >= v.resetAt) buckets.delete(k);
@@ -121,4 +125,31 @@ export function rateLimit(subject: string, limitPerMin: number): { ok: boolean; 
 /** Rate-limit key: per API key where there is one, else per user. */
 export function subjectOf(caller: Caller): string {
   return caller.keyDocId ? `k:${caller.keyDocId}` : `u:${caller.uid}`;
+}
+
+/**
+ * Best-effort client IP, used to bound visitors with no account at all.
+ *
+ * `x-forwarded-for` is client-controllable in general, but on Vercel the proxy
+ * appends the real peer address and it is the *last* entry that the platform
+ * guarantees. `x-real-ip` is set by the same proxy and is not forwarded from
+ * the client, so it is preferred where present.
+ *
+ * ponytail: an IP is a weak identity — mobile carriers NAT thousands of users
+ * behind one, and a determined abuser rotates addresses. This is a speed bump
+ * for casual scripted abuse, not an access control. The real control on the
+ * anonymous path is that it costs us CPU and nothing else: no account data is
+ * reachable without a credential.
+ */
+export function clientIp(req: { headers: Record<string, string | string[] | undefined> }): string {
+  const real = req.headers["x-real-ip"];
+  if (typeof real === "string" && real.trim()) return real.trim();
+
+  const fwd = req.headers["x-forwarded-for"];
+  const raw = Array.isArray(fwd) ? fwd[0] : fwd;
+  if (typeof raw === "string" && raw.trim()) {
+    const parts = raw.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  return "unknown";
 }

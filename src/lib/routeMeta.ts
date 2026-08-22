@@ -320,16 +320,8 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: "/settings",
-    title: "Settings & API Keys | PDFly",
-    description: "Manage your account and API keys.",
-    priority: 0.1,
-    changefreq: "monthly",
-    noindex: true,
-  },
-  {
-    path: "/analytics",
-    title: "Analytics | PDFly",
-    description: "Your API usage.",
+    title: "API dashboard | PDFly",
+    description: "Your API usage, keys and available downloads.",
     priority: 0.1,
     changefreq: "monthly",
     noindex: true,

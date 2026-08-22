@@ -68,12 +68,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   res.setHeader("Content-Type", isPdf ? "application/pdf" : "application/octet-stream");
   res.setHeader("Content-Disposition", `attachment; filename="${filename.replace(/"/g, "")}"`);
-  res.setHeader("Content-Length", String(bytes.length));
   // Private: the URL is a bearer credential, so no shared cache may keep it.
   res.setHeader("Cache-Control", "private, max-age=300");
   // The token already bounds how long this is reachable; say so in the clear.
   res.setHeader("X-Expires-At", new Date(verified.expiresAt).toISOString());
 
-  if (req.method === "HEAD") return res.status(200).end();
-  return res.status(200).send(Buffer.from(bytes));
+  if (req.method === "HEAD") {
+    // A HEAD caller wants the size without the body, and there is no streaming
+    // concern when no body is sent.
+    res.setHeader("Content-Length", String(bytes.length));
+    return res.status(200).end();
+  }
+
+  /*
+   * Written in chunks, with no Content-Length, so the response is streamed.
+   *
+   * This is not a micro-optimisation. A single `res.send(buffer)` is a fixed
+   * body, and Vercel rejects a fixed response body over ~4.5 MB with a 413
+   * before it reaches the client — which meant every download larger than that
+   * failed, silently and only in production, no matter how the file got made.
+   * Streamed responses are exempt from that cap. The bytes are already in
+   * memory either way; this only changes how they leave.
+   */
+  const buffer = Buffer.from(bytes);
+  const STREAM_CHUNK = 256 * 1024;
+  res.status(200);
+  for (let offset = 0; offset < buffer.length; offset += STREAM_CHUNK) {
+    const chunk = buffer.subarray(offset, offset + STREAM_CHUNK);
+    // Respect backpressure: without this a large file queues entirely in the
+    // socket buffer and the function's memory doubles for no reason.
+    if (!res.write(chunk)) {
+      await new Promise<void>((resolve) => res.once("drain", resolve));
+    }
+  }
+  return res.end();
 }

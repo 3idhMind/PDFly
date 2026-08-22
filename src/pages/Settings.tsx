@@ -4,36 +4,66 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/Header";
-import { Key, Plus, Copy, Trash2, Activity, BarChart3, FileText, ShieldCheck } from "lucide-react";
+import {
+  Key, Plus, Copy, Trash2, Activity, BarChart3, FileText, ShieldCheck, Download, Clock,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { SITE_URL } from "@/lib/config";
 import { formatBytes } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { ApiMaintenanceNotice } from "@/components/ApiMaintenanceNotice";
 import { PRODUCT_ID } from "@/lib/firebase/client";
 import { fs, getDb } from "@/lib/firebase/firestore";
-import { api, ApiError, type ApiKeySummary, type CreatedApiKey } from "@/lib/api";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+import {
+  api, ApiError, type ApiKeySummary, type CreatedApiKey, type StoredDocument,
+} from "@/lib/api";
+
+/**
+ * One page for everything an account has: quota, history, keys and the files
+ * still downloadable.
+ *
+ * ── Why /analytics was folded in here ─────────────────────────────────────
+ * Usage lived on its own route with four stat tiles and one bar chart. That is
+ * not a page's worth of content, and splitting "how much have I used" from "my
+ * keys and my quota" meant every real question needed two navigations. The
+ * chart is now a section, the route is gone, and the nav has one account entry
+ * instead of two.
+ */
 
 /** Mirrors PDFLY_FREE_TIER_MONTHLY_QUOTA on the server. */
 const FREE_TIER_MONTHLY_QUOTA = 100;
 
-interface MonthUsage {
-  pdfsGenerated: number;
+interface MonthRow {
+  month: string;
+  pdfs: number;
   apiCalls: number;
-  bytesProcessed: number;
+  bytes: number;
 }
 
 const currentMonthId = () => new Date().toISOString().slice(0, 7); // "2026-08"
+
+/** "48 minutes" / "3 minutes" — the unit a one-hour window actually needs. */
+function formatRemaining(seconds: number): string {
+  if (seconds < 60) return "under a minute";
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"}`;
+  const hours = Math.round(mins / 60);
+  return `${hours} hour${hours === 1 ? "" : "s"}`;
+}
 
 const Settings = () => {
   const { user, loading: authLoading } = useAuth();
   const [apiKeys, setApiKeys] = useState<ApiKeySummary[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [created, setCreated] = useState<CreatedApiKey | null>(null);
-  const [usage, setUsage] = useState<MonthUsage>({ pdfsGenerated: 0, apiCalls: 0, bytesProcessed: 0 });
+  const [months, setMonths] = useState<MonthRow[]>([]);
+  const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [loading, setLoading] = useState(true);
+  const [docsLoading, setDocsLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -57,34 +87,54 @@ const Settings = () => {
     }
   }, [toast]);
 
+  /**
+   * One document per calendar month — a missing document simply means zero
+   * used, which is why there is no monthly reset job to go wrong. The same
+   * read answers both "this month" and the twelve-month chart.
+   */
   const loadUsage = useCallback(async () => {
     if (!user) return;
     try {
-      // One document per calendar month — a missing document simply means zero
-      // used, which is why there is no monthly reset job to go wrong.
-      const [{ doc, getDoc }, db] = await Promise.all([fs(), getDb()]);
-      const snap = await getDoc(
-        doc(db, "users", user.uid, "products", PRODUCT_ID, "usage", currentMonthId()),
+      const [{ collection, getDocs }, db] = await Promise.all([fs(), getDb()]);
+      const snap = await getDocs(
+        collection(db, "users", user.uid, "products", PRODUCT_ID, "usage"),
       );
-      if (snap.exists()) {
-        const d = snap.data();
-        setUsage({
-          pdfsGenerated: d.pdfsGenerated ?? 0,
-          apiCalls: d.apiCalls ?? 0,
-          bytesProcessed: d.bytesProcessed ?? 0,
-        });
-      }
+      const rows = snap.docs
+        .map((d) => {
+          const v = d.data();
+          return {
+            month: d.id, // "YYYY-MM" — the document ID is the month
+            pdfs: v.pdfsGenerated ?? 0,
+            apiCalls: v.apiCalls ?? 0,
+            bytes: v.bytesProcessed ?? 0,
+          };
+        })
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .slice(-12);
+      setMonths(rows);
     } catch {
       /* Usage is informational — never block the page on it. */
     }
   }, [user]);
 
+  const loadDocuments = useCallback(async () => {
+    try {
+      const { documents: docs } = await api.listDocuments();
+      setDocuments(docs);
+    } catch {
+      /* An unreachable storage backend must not break key management. */
+    } finally {
+      setDocsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       void loadKeys();
       void loadUsage();
+      void loadDocuments();
     }
-  }, [user, loadKeys, loadUsage]);
+  }, [user, loadKeys, loadUsage, loadDocuments]);
 
   const handleCreate = async () => {
     const name = newKeyName.trim();
@@ -134,20 +184,32 @@ const Settings = () => {
 
   if (authLoading || !user) return null;
 
+  const thisMonth = months.find((m) => m.month === currentMonthId());
+  const usage = {
+    pdfsGenerated: thisMonth?.pdfs ?? 0,
+    apiCalls: thisMonth?.apiCalls ?? 0,
+    bytesProcessed: thisMonth?.bytes ?? 0,
+  };
   const quotaPct = Math.min(100, Math.round((usage.pdfsGenerated / FREE_TIER_MONTHLY_QUOTA) * 100));
+
+  const totals = months.reduce(
+    (acc, m) => ({ pdfs: acc.pdfs + m.pdfs, apiCalls: acc.apiCalls + m.apiCalls, bytes: acc.bytes + m.bytes }),
+    { pdfs: 0, apiCalls: 0, bytes: 0 },
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-secondary/20">
       <SEOHead
-        title="Settings & API Keys — PDFly"
-        description="Manage your PDFly API keys, view usage statistics, and configure rate limits for your PDF generation account."
+        title="API dashboard — PDFly"
+        description="Your PDFly API usage, keys and recently generated documents in one place."
         canonical={`${SITE_URL}/settings`}
       />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-6">Settings &amp; API Management</h1>
-
-        <ApiMaintenanceNotice className="mb-6" />
+        <h1 className="font-display text-3xl font-bold text-foreground mb-1">API dashboard</h1>
+        <p className="text-muted-foreground text-sm mb-6">
+          Usage, keys and downloads for your account.
+        </p>
 
         {/* This month's usage */}
         <Card className="p-6 mb-6">
@@ -185,6 +247,62 @@ const Settings = () => {
           <p className="text-xs text-muted-foreground mt-4">
             Only PDFs generated through the REST API count towards this. Anything you make in the
             browser is processed on your own device and isn't metered at all.
+          </p>
+        </Card>
+
+        {/* Usage over time — was the separate /analytics page */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" /> Usage over time
+            </h2>
+            <span className="text-xs text-muted-foreground">Last 12 months</span>
+          </div>
+
+          {months.length > 0 && (
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {[
+                { label: "PDFs generated", value: totals.pdfs.toLocaleString() },
+                { label: "API calls", value: totals.apiCalls.toLocaleString() },
+                { label: "Data processed", value: formatBytes(totals.bytes) },
+              ].map((c) => (
+                <div key={c.label}>
+                  <div className="text-xl font-bold text-foreground">{c.value}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{c.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {months.length === 0 ? (
+            <div className="text-center py-10 border border-dashed border-border rounded-lg">
+              <Activity className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+              <p className="text-muted-foreground text-sm">No API usage yet.</p>
+              <p className="text-xs text-muted-foreground/70 mt-1 max-w-sm mx-auto">
+                PDFs you generate in the browser are processed on your own device and aren't
+                metered — only REST API calls appear here.
+              </p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={months}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                <Bar dataKey="pdfs" name="PDFs" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          <p className="text-xs text-muted-foreground mt-4">
+            We record counts, not contents. PDFly never stores what you generated — only how many.
           </p>
         </Card>
 
@@ -270,19 +388,48 @@ const Settings = () => {
           </p>
         </Card>
 
-        {/* Recent documents */}
+        {/* Available downloads */}
         <Card className="p-6">
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
-            <FileText className="w-5 h-5 text-primary" /> Recent documents
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-1">
+            <FileText className="w-5 h-5 text-primary" /> Available downloads
           </h2>
-          <div className="text-center py-10 border border-dashed border-border rounded-lg">
-            <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-            <p className="text-muted-foreground text-sm">No API-generated documents.</p>
-            <p className="text-xs text-muted-foreground/70 mt-1 max-w-md mx-auto">
-              Only PDFs made through the REST API ever appear here. Anything you generate in the
-              browser stays on your device and is never uploaded.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Files made through the REST API are kept for one hour, then deleted for good. This is
+            what is still retrievable right now, not a history.
+          </p>
+
+          {docsLoading ? (
+            <p className="text-muted-foreground text-sm">Loading…</p>
+          ) : documents.length === 0 ? (
+            <div className="text-center py-10 border border-dashed border-border rounded-lg">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+              <p className="text-muted-foreground text-sm">Nothing available to download.</p>
+              <p className="text-xs text-muted-foreground/70 mt-1 max-w-md mx-auto">
+                Files expire an hour after they are made, so this is usually empty. Anything you
+                generate in the browser stays on your device and never appears here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {documents.map((doc) => (
+                <div key={doc.download_url} className="flex items-center justify-between p-4 rounded-lg border bg-card gap-3">
+                  <div className="min-w-0">
+                    <span className="font-medium text-foreground truncate block">{doc.name}</span>
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 shrink-0" />
+                      Expires in {formatRemaining(doc.expires_in_seconds)}
+                      {doc.size !== null && ` · ${formatBytes(doc.size)}`}
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" asChild className="shrink-0">
+                    <a href={doc.download_url} download>
+                      <Download className="w-3.5 h-3.5 mr-1" /> Download
+                    </a>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </main>
       <Footer />

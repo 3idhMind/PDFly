@@ -347,6 +347,31 @@ export const ENDPOINTS: Endpoint[] = [
     ],
   },
   {
+    id: "upload",
+    group: "System",
+    name: "Chunked upload",
+    method: "POST",
+    path: "/api/pdf/upload",
+    auth: "key-or-token",
+    summary: "Sends a file larger than the request-body cap, in parts, and returns a ref the PDF operations accept.",
+    note: "Vercel refuses a request body over ~4.5 MB before our code runs, so a bigger file cannot be sent inline at all. Call this once per 3 MB part with action \"part\", then once with action \"complete\". The returned `ref:` string goes wherever an endpoint takes base64 or an https URL — for example { \"pdfs\": [\"ref:…\", \"ref:…\"] } on merge. Refs are signed, scoped to the caller and expire in an hour. Authentication is optional: without it you get the anonymous rate limit, which is what the browser fallback uses.",
+    request: [
+      { name: "action", type: "string", required: true, desc: '"part" or "complete".' },
+      { name: "uploadId", type: "string", required: true, desc: "8-64 chars of A-Z, a-z, 0-9, _ or -. You choose it; keep it the same across every call for one file." },
+      { name: "total", type: "number", required: true, desc: "How many parts the file is split into." },
+      { name: "index", type: "number", desc: 'action "part" only. Zero-based.' },
+      { name: "data", type: "string", desc: 'action "part" only. Base64 of at most 3 MB of raw bytes.' },
+      { name: "filename", type: "string", desc: 'action "complete" only. Used for the download name.' },
+    ],
+    response: [
+      { name: "ref", type: "string", desc: 'action "complete" only. Pass this wherever a PDF input is accepted.' },
+      { name: "size_bytes", type: "number", desc: "Size of the assembled file." },
+      { name: "expires_at", type: "string", desc: "ISO timestamp the ref stops resolving." },
+      { name: "received", type: "number", desc: 'action "part" only. The index that was stored.' },
+    ],
+    exampleBody: { action: "complete", uploadId: "a1b2c3d4e5f6", total: 4, filename: "contract.pdf" },
+  },
+  {
     id: "file",
     group: "System",
     name: "Download a stored file",
@@ -366,13 +391,14 @@ export const GROUPS = ["Generate", "Basic", "Optimise", "Convert", "Account", "B
 
 /** Real platform limits, not policy. Stated so nobody discovers them at 3am. */
 export const LIMITS = [
-  { label: "Request body", value: "~4.5 MB", note: "Vercel's cap, applied before our code runs. Base64 adds about a third, so the practical PDF ceiling is near 3.3 MB." },
-  { label: "Response body", value: "~4.5 MB", note: "Same cap. With storage enabled the file moves to a link, so this stops binding." },
+  { label: "Input per job", value: "10 MB", note: "Free tier, across every file in one request. Growth raises it to 1 GB; past that, talk to us." },
+  { label: "Single request body", value: "~4.5 MB", note: "Vercel's cap, applied before our code runs. Base64 adds about a third. Use /api/pdf/upload to send anything larger — it splits the file into parts and hands back a ref." },
+  { label: "Inline response", value: "3 MB", note: "Results larger than this come back as a signed download_url instead of base64. Downloads themselves are streamed and have no cap." },
   { label: "Documents per month", value: "100", note: "Free tier. Resets on the first of the month." },
   { label: "Requests per minute", value: "60", note: "Per key. Exceeding it returns 429." },
   { label: "Documents per request", value: "5", note: "Applies to /api/pdf/generate." },
   { label: "API keys per account", value: "10", note: "Revoke one to create another." },
-  { label: "Stored file retention", value: "1 hour", note: "Only when storage is configured. After that the link 404s and the object is deleted." },
+  { label: "Stored file retention", value: "1 hour", note: "After that the link 404s and the object is deleted." },
 ];
 
 /** Error codes a caller should handle, taken from api/_lib/http.ts and the handlers. */

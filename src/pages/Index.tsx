@@ -112,7 +112,7 @@ const Index = () => {
         err instanceof Error ? err.message : "Something went wrong generating your PDFs";
       toast({ title: "Generation Failed", description: message, variant: "destructive" });
     }
-  }, [documents, selectedTemplate, pageSize, language, toast, navigate]);
+  }, [documents, selectedTemplate, pageSize, language, toast]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

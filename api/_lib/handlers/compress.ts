@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
-import { assertPublicHttpsUrl, assertLooksLikePdf, InputError } from "../pdfInput.js";
+import { assertPublicHttpsUrl, assertLooksLikePdf, InputError, isUploadRef, resolveUploadRef } from "../pdfInput.js";
+import { deliverFile } from "../storage.js";
 
 /**
  * POST /api/compress-pdf   { pdf: base64|https URL, target_bytes?: number }
@@ -37,7 +38,15 @@ const FETCH_TIMEOUT_MS = 15_000;
 /** Accepts base64 (with or without a data: prefix) or a public https URL. */
 async function loadPdf(input: unknown, label = "pdf"): Promise<Uint8Array> {
   if (typeof input !== "string" || !input) {
-    throw new InputError(`${label}: must be a base64 string or https URL`);
+    throw new InputError(`${label}: must be a base64 string, https URL or upload ref`);
+  }
+
+  // A ref from /api/pdf/upload: bytes already in storage, so no request-body
+  // size cap applies — the tier ceiling was enforced when they were uploaded.
+  if (isUploadRef(input)) {
+    const bytes = await resolveUploadRef(input, label);
+    assertLooksLikePdf(bytes, label);
+    return bytes;
   }
 
   if (input.startsWith("http://") || input.startsWith("https://")) {
@@ -132,14 +141,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const ratio = bytes.length > 0 ? out.length / bytes.length : 1;
 
-    // TODO(stage-3): switch to StorageProvider + temporary link
-    // Supabase Storage is gone and its replacement is not built yet, so the
-    // bytes ride back in the response instead of a signed `url`. Callers get the
-    // file immediately; the trade-off is no `expires_in_seconds` to report.
+    // Inline when it fits, a signed link when it does not. `data` is kept as
+    // the field name existing callers already read.
+    const delivery = await deliverFile(caller.uid, "compressed.pdf", out);
+
     return ok(res, {
       success: true,
       name: "compressed.pdf",
-      data: Buffer.from(out).toString("base64"),
+      ...(delivery.pdf_base64 ? { data: delivery.pdf_base64 } : {}),
+      ...(delivery.download_url ? { download_url: delivery.download_url } : {}),
       original_size_bytes: bytes.length,
       compressed_size_bytes: out.length,
       compression_ratio: Number(ratio.toFixed(3)),

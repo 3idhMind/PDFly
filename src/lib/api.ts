@@ -60,11 +60,29 @@ export interface CreatedApiKey {
   warning: string;
 }
 
+/* -------------------------------------------------------------- documents */
+
+export interface StoredDocument {
+  name: string;
+  /** Null for objects stored before size was recorded. */
+  size: number | null;
+  created_at: string | null;
+  expires_at: string;
+  expires_in_seconds: number;
+  download_url: string;
+}
+
 export const api = {
   /** Identity + admin flag, decided server-side. See api/me.ts. */
   me: () => request<{ uid: string; authType: string; isAdmin: boolean }>("/api/account/me"),
 
   listKeys: () => request<{ keys: ApiKeySummary[] }>("/api/account/keys"),
+
+  /**
+   * API output still inside its retention window. Short by design — files are
+   * deleted for real after an hour, so an empty list is the normal state.
+   */
+  listDocuments: () => request<{ documents: StoredDocument[] }>("/api/account/documents"),
 
   createKey: (name: string) =>
     request<CreatedApiKey>("/api/account/keys", {

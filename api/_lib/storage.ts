@@ -297,6 +297,99 @@ export async function sweepExpired(limit = 25): Promise<{ deleted: number; faile
   return { deleted, failed };
 }
 
+/**
+ * Largest output we will still inline as base64.
+ *
+ * Vercel caps a fixed response body at ~4.5 MB and base64 adds a third, so
+ * anything past roughly 3.3 MB of PDF cannot come back inline at all. 3 MB
+ * leaves room for the rest of the envelope.
+ */
+export const INLINE_MAX_BYTES = 3 * 1024 * 1024;
+
+export interface Delivery {
+  pdf_base64?: string;
+  download_url?: string;
+  size_bytes: number;
+  storage: StorageDisclosure;
+}
+
+/**
+ * Hands a finished file back to the caller by whichever route actually fits.
+ *
+ * ── Why this is not just `pdf_base64` ─────────────────────────────────────
+ * Every operation except `generate` used to inline the result unconditionally,
+ * with a TODO saying object storage was not wired up yet. It has been wired up
+ * for a while, so the TODO was the only thing still true: a merge that produced
+ * 6 MB returned a body Vercel refused with a 413, and the caller saw a platform
+ * error rather than their file. Above the inline ceiling the bytes go to
+ * storage and the response carries a link instead.
+ *
+ * Small outputs still come back inline as well as by link, so existing callers
+ * that read `pdf_base64` keep working unchanged.
+ */
+export async function deliverFile(
+  uid: string,
+  filename: string,
+  bytes: Uint8Array,
+  contentType = "application/pdf",
+): Promise<Delivery> {
+  const disclosure = await persistIfPossible(uid, filename, bytes, contentType);
+  const fitsInline = bytes.length <= INLINE_MAX_BYTES;
+
+  if (!fitsInline && !disclosure.download_url) {
+    // Nowhere to put it and too big to return. Say so plainly rather than
+    // emitting a body the platform will reject on our behalf.
+    throw new Error(
+      `Result is ${Math.round(bytes.length / (1024 * 1024))}MB, which exceeds the ` +
+        `${Math.round(INLINE_MAX_BYTES / (1024 * 1024))}MB inline limit, and backup storage was ` +
+        "unavailable for this request. Try again, or split the job into smaller pieces.",
+    );
+  }
+
+  return {
+    ...(fitsInline ? { pdf_base64: Buffer.from(bytes).toString("base64") } : {}),
+    ...(disclosure.download_url ? { download_url: disclosure.download_url } : {}),
+    size_bytes: bytes.length,
+    storage: disclosure,
+  };
+}
+
+/**
+ * The multi-output version of `deliverFile`, for split and to-pages.
+ *
+ * Those two return an array, and the cap applies to the whole response, not to
+ * any one item: forty pages of 200 KB each is 8 MB and gets refused even though
+ * every part looks small. So the decision is made on the total, and when it is
+ * over budget every part becomes a link rather than some arbitrary subset.
+ */
+export async function deliverParts(
+  uid: string,
+  parts: { name: string; bytes: Uint8Array }[],
+): Promise<{ name: string; size_bytes: number; data?: string; download_url?: string }[]> {
+  const total = parts.reduce((sum, p) => sum + p.bytes.length, 0);
+
+  if (total <= INLINE_MAX_BYTES) {
+    return parts.map((p) => ({
+      name: p.name,
+      size_bytes: p.bytes.length,
+      data: Buffer.from(p.bytes).toString("base64"),
+    }));
+  }
+
+  const out: { name: string; size_bytes: number; data?: string; download_url?: string }[] = [];
+  for (const part of parts) {
+    const disclosure = await persistIfPossible(uid, part.name, part.bytes);
+    if (!disclosure.download_url) {
+      throw new Error(
+        `Result set is ${Math.round(total / (1024 * 1024))}MB, too large to return inline, and ` +
+          "backup storage was unavailable for this request. Try a smaller range.",
+      );
+    }
+    out.push({ name: part.name, size_bytes: part.bytes.length, download_url: disclosure.download_url });
+  }
+  return out;
+}
+
 export async function persistIfPossible(
   uid: string,
   filename: string,
@@ -318,7 +411,9 @@ export async function persistIfPossible(
     // an unindexed object is a housekeeping problem, not a user-facing one.
     await db()
       .collection(STORED_FILES)
-      .add({ key, uid, expiresAt: stored.expiresAt, provider: provider.name, createdAt: new Date().toISOString() })
+      // `size` is recorded so /api/account/documents can show it without
+      // fetching the object back just to measure it.
+      .add({ key, uid, size: bytes.length, expiresAt: stored.expiresAt, provider: provider.name, createdAt: new Date().toISOString() })
       .catch((err) => console.error("[storage] could not index upload:", (err as Error).name));
 
     // Fire and forget. Cleaning up someone else's expired files must never

@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { fail, ok, handledPreflight } from "../http.js";
 import { requireUser } from "../requireUser.js";
 import { checkQuota, recordUsage, rateLimit, subjectOf } from "../quota.js";
-import { assertPublicHttpsUrl } from "../pdfInput.js";
+import { assertPublicHttpsUrl, isUploadRef, resolveUploadRef } from "../pdfInput.js";
+import { deliverFile } from "../storage.js";
 
 /**
  * POST /api/images-to-pdf
@@ -55,7 +56,14 @@ function sniffImage(bytes: Uint8Array, label: string): "png" | "jpg" {
 
 async function loadImage(input: unknown, label: string): Promise<{ bytes: Uint8Array; kind: "png" | "jpg" }> {
   if (typeof input !== "string" || !input) {
-    throw new Error(`${label}: must be a base64 string or https URL`);
+    throw new Error(`${label}: must be a base64 string, https URL or upload ref`);
+  }
+
+  // A ref from /api/pdf/upload: bytes already in storage, so no request-body
+  // size cap applies — the tier ceiling was enforced when they were uploaded.
+  if (isUploadRef(input)) {
+    const bytes = await resolveUploadRef(input, label);
+    return { bytes, kind: sniffImage(bytes, label) };
   }
 
   if (input.startsWith("http://") || input.startsWith("https://")) {
@@ -204,12 +212,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const out = await doc.save();
     await recordUsage(caller.uid, { pdfs: 1, apiCalls: 1, bytes: totalIn });
 
-    // TODO(stage-3): switch to StorageProvider + temporary link
+    // Inline when it fits, a signed link when it does not. See deliverFile.
+    const delivery = await deliverFile(caller.uid, "images.pdf", out);
+
     return ok(res, {
       success: true,
       filename: "images.pdf",
-      pdf_base64: Buffer.from(out).toString("base64"),
-      size_bytes: out.length,
+      ...delivery,
       pages: doc.getPageCount(),
       images: images.length,
       page_size: fitMode === "original" ? "original" : pageSize,
