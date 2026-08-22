@@ -260,11 +260,7 @@ const ApiPlayground = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead
-        title="API Playground — PDFly"
-        description="Run PDFly API endpoints from your browser with sample inputs and preview generated PDFs and images."
-        canonical="https://pdfly.3idhmind.in/api-playground"
-      />
+      <SEOHead />
       <Header />
       <main className="flex-1 container mx-auto px-4 py-10 max-w-6xl">
         <div className="mb-8">

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { SITE_URL } from "@/lib/config";
 import { useAuth } from "@/hooks/useAuth";
 import { getIdToken } from "@/lib/firebase/auth";
 import { Card } from "@/components/ui/card";
@@ -187,12 +186,7 @@ const Status = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead
-        title="System Status — PDFly by 3idhMinds"
-        description="Check the real-time status of PDFly services. Monitor API Gateway, Database, and PDF Generation uptime."
-        keywords="PDFly status, PDF API status, system uptime, 3idhMinds status"
-        canonical={`${SITE_URL}/status`}
-      />
+      <SEOHead keywords="PDFly status, PDF API status, system uptime, 3idhMinds status" />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-3xl flex-1">
         <div className="text-center mb-10">

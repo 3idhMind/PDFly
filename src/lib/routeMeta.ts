@@ -233,7 +233,7 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: "/create",
-    title: "Create a PDF — Pick a Tool | PDFly",
+    title: "All PDF Tools — Merge, Split, Compress & Convert Free | PDFly",
     description:
       "Every PDFly tool in one place: merge, split, compress, image to PDF, PDF to image and text to PDF. All free and all client-side.",
     priority: 0.6,
@@ -267,9 +267,9 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     path: "/pricing",
-    title: "Pricing — PDFly Is Free | PDFly",
+    title: "Pricing — Free PDF Tools and a Free API Tier | PDFly",
     description:
-      "Every PDFly web tool is free with no signup, no watermark and no limits. The REST API has a free tier. Paid plans are not available yet.",
+      "Every PDFly browser tool is free with no signup, no watermark and no limits. The REST API has a free tier of 100 documents a month with 10 MB jobs. Growth and Enterprise plans are priced on request.",
     priority: 0.6,
     changefreq: "monthly",
   },

@@ -2,18 +2,13 @@ import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
-import { SITE_URL } from "@/lib/config";
 import { TOOLS } from "@/lib/toolsList";
 import { ArrowRight, ShieldCheck, Zap, BadgeCheck } from "lucide-react";
 
 const Create = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead
-        title="All PDF Tools — Merge, Split, Compress & Convert Free | PDFly"
-        description="Pick a free PDF tool: merge, split, compress, PDF to images, images to PDF, and text to PDF. Everything runs in your browser — no upload, no signup."
-        canonical={`${SITE_URL}/create`}
-      />
+      <SEOHead />
       <Header />
 
       <main className="container mx-auto px-5 py-12 md:py-16 max-w-6xl flex-1">

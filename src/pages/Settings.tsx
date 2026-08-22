@@ -10,7 +10,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
-import { SITE_URL } from "@/lib/config";
 import { formatBytes } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { PRODUCT_ID } from "@/lib/firebase/client";
@@ -199,11 +198,7 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-secondary/20">
-      <SEOHead
-        title="API dashboard — PDFly"
-        description="Your PDFly API usage, keys and recently generated documents in one place."
-        canonical={`${SITE_URL}/settings`}
-      />
+      <SEOHead />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="font-display text-3xl font-bold text-foreground mb-1">API dashboard</h1>

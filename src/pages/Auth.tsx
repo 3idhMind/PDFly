@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Lock, Clock } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { SEOHead } from "@/components/SEOHead";
-import { SITE_URL } from "@/lib/config";
 import { signInWithGoogle, authErrorMessage } from "@/lib/firebase/auth";
 
 const GoogleMark = () => (
@@ -58,11 +57,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
-      <SEOHead
-        title="Sign In — PDFly by 3idhMinds"
-        description="Sign in to PDFly to manage your API keys and usage. The web PDF tools are free and need no account at all."
-        canonical={`${SITE_URL}/auth`}
-      />
+      <SEOHead />
 
       {/* Left brand panel */}
       <div className="hidden md:flex relative bg-[#0D0D0D] text-white flex-col justify-between p-12 overflow-hidden">

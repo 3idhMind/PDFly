@@ -41,6 +41,10 @@ if (!existsSync(join(dist, "index.html"))) {
 
 // Node strips the TypeScript types natively, so the app and this script share
 // one metadata source instead of drifting apart.
+const { TOOLS_DATA, toolByHref, guidesForSlug } = await import(
+  pathToFileURL(join(root, "src/lib/toolsData.ts")).href
+);
+
 const { ROUTES, SITE_ORIGIN } = await import(
   pathToFileURL(join(root, "src/lib/routeMeta.ts")).href
 );
@@ -187,12 +191,73 @@ function buildHtml({ path, title, description, noindex }, post = null) {
   // to anything that does not run JavaScript — on the pages where the text IS
   // the product. `white-space:nowrap` is dropped for the same reason: it was
   // fine for one line and wrong for an article.
-  const body = post?.content
-    ? post.content
-        .split(/\n{2,}/)
-        .map((para) => `<p>${esc(para.trim())}</p>`)
-        .join("")
-    : `<p>${d}</p>`;
+  /*
+   * What a crawler with no JavaScript actually reads.
+   *
+   * This used to be the meta description repeated once — 24 to 36 words on
+   * every page that is not a blog post, against 877 on the posts. The pages the
+   * site most wants ranked were the emptiest ones in the index. Everything
+   * below comes from data the rendered page shows too, so the crawled copy and
+   * the visible copy say the same thing.
+   */
+  const tool = toolByHref(path);
+  const guides = guidesForSlug(path.slice(1));
+  const link = (href, label) => `<a href="${SITE_ORIGIN}${href}">${esc(label)}</a>`;
+
+  let body;
+  if (post?.content) {
+    body = post.content
+      .split(/\n{2,}/)
+      .map((para) => `<p>${esc(para.trim())}</p>`)
+      .join("");
+  } else if (path === "/create") {
+    // The tool index. Its whole purpose is the list, so the list is the content.
+    body =
+      `<p>${d}</p><ul>` +
+      TOOLS_DATA.map(
+        (t) => `<li>${link(t.href, t.label)} — ${esc(t.desc)} Accepts ${esc(t.accepts)}.</li>`,
+      ).join("") +
+      "</ul>";
+  } else {
+    const parts = [`<p>${d}</p>`];
+
+    if (tool) {
+      parts.push(`<p>${esc(tool.desc)} Accepts ${esc(tool.accepts)}.</p>`);
+    }
+
+    // Preset routes (/compress-pdf-to-200kb and friends) are not entries in the
+    // tool list — they are the same component with a target size — so they were
+    // falling through with nothing but their description. They are also the
+    // pages STRATEGY.md is betting on, which made this the worst place to be
+    // thin.
+    if (tool || guides.length || /^\/(compress|resize)-/.test(path)) {
+      parts.push(
+        "<p>Runs entirely in your browser: the file is never uploaded, there is no size limit " +
+          "and no account is required.</p>",
+      );
+    }
+
+    if (guides.length) {
+      parts.push(
+        "<p>Uploading for an exam? " +
+          guides.map((g) => `${link(g.href, g.label)} — ${esc(g.blurb)}`).join(" ") +
+          "</p>",
+      );
+    }
+
+    if (tool || guides.length || /^\/(compress|resize)-/.test(path)) {
+      parts.push(
+        "<p>Other free tools: " +
+          TOOLS_DATA.filter((t) => t.href !== path)
+            .slice(0, 6)
+            .map((t) => link(t.href, t.label))
+            .join(", ") +
+          ".</p>",
+      );
+    }
+
+    body = parts.join("");
+  }
 
   const noscript =
     `<div id="prerender-content" style="position:absolute;width:1px;height:1px;` +
@@ -200,6 +265,38 @@ function buildHtml({ path, title, description, noindex }, post = null) {
     `<h1>${t}</h1>${body}</div>`;
   html = html.replace('<div id="root"></div>', `<div id="root"></div>\n    ${noscript}`);
 
+
+  /*
+   * Article schema, for blog pages only.
+   *
+   * The shell carries a site-wide WebApplication/Organization block and every
+   * blog post was inheriting it unchanged, so the one content type on this site
+   * that Google has a dedicated rich result for was describing itself as a
+   * piece of software. The React page adds BlogPosting after hydration, which
+   * is too late for the crawl. Appended rather than replacing the shell's: both
+   * statements are true, and a page may carry more than one type.
+   */
+  if (post) {
+    const ld = {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: post.title,
+      description: post.excerpt,
+      url: canonical,
+      mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
+      author: { "@type": "Organization", name: post.author || "3idhMinds" },
+      publisher: { "@type": "Organization", name: "3idhMinds", url: SITE_ORIGIN },
+      ...(post.publishAt ? { datePublished: String(post.publishAt).slice(0, 10) } : {}),
+      ...(post.tags?.length ? { keywords: post.tags.join(", ") } : {}),
+      ...(post.category ? { articleSection: post.category } : {}),
+      inLanguage: "en",
+    };
+    html = html.replace(
+      "</head>",
+      `    <script type="application/ld+json">${JSON.stringify(ld)}</script>
+  </head>`,
+    );
+  }
   return html;
 }
 
@@ -277,15 +374,29 @@ writeFileSync(
 
 /* ------------------------------------------------------------------ sitemap */
 
-const today = new Date().toISOString().slice(0, 10);
+/**
+ * `lastmod` is emitted only where a real content date exists.
+ *
+ * It used to be `new Date()` on every URL, so all 47 claimed to have changed
+ * the moment the site was deployed, including pages untouched for months.
+ * Google's guidance is that lastmod reflects when the content meaningfully
+ * changed; a value that is always "today" is not a signal, and a feed that
+ * cries wolf on every deploy teaches the crawler to ignore the field. Omitting
+ * it is explicitly allowed and is the honest option, so static routes carry no
+ * lastmod and blog posts carry their real publish date.
+ */
 const sitemapEntries = allRoutes
   .filter((r) => !r.noindex)
   .map((r) => {
     const loc = r.path === "/" ? SITE_ORIGIN : `${SITE_ORIGIN}${r.path}`;
+    const post = r.path.startsWith("/blog/")
+      ? blogPosts.find((b) => `/blog/${b.slug}` === r.path)
+      : null;
+    const lastmod = post?.publishAt ? String(post.publishAt).slice(0, 10) : null;
     return [
       "  <url>",
       `    <loc>${loc}</loc>`,
-      `    <lastmod>${today}</lastmod>`,
+      ...(lastmod ? [`    <lastmod>${lastmod}</lastmod>`] : []),
       `    <changefreq>${r.changefreq}</changefreq>`,
       `    <priority>${r.priority.toFixed(1)}</priority>`,
       "  </url>",

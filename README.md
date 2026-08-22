@@ -330,4 +330,4 @@ open a pull request, and prefer deleting code to adding it.
 
 [MIT](LICENSE).
 
-Built by [3idhMind](https://3idhmind.in).
+Built by [3idhminds](https://3idhmind.in).

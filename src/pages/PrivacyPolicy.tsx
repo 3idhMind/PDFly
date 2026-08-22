@@ -4,12 +4,11 @@ import { SEOHead } from "@/components/SEOHead";
 import { Card } from "@/components/ui/card";
 import { Shield, Monitor, Server, Cloud, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { SITE_URL } from "@/lib/config";
 
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead title="Privacy Policy — PDFly by 3idhMinds" description="How PDFly handles your data. Web UI runs 100% locally in your browser. REST API processes files inline with no persistent storage." keywords="PDFly privacy, PDF generator privacy policy, 3idhMinds privacy" canonical={`${SITE_URL}/privacy`} />
+      <SEOHead keywords="PDFly privacy, PDF generator privacy policy, 3idhMinds privacy" />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-4xl flex-1">
         <div className="mb-8">

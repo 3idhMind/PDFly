@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
+import { SEOHead } from "@/components/SEOHead";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { SITE_URL } from "@/lib/config";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -29,13 +29,8 @@ const TextToPdfFeature = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead keywords="text to PDF, HTML to PDF, markdown to PDF, Hindi PDF generator, Arabic PDF, client-side PDF, free PDF API, PDFly" />
       <Helmet>
-        <title>Text to PDF Converter — 15 Templates, Runs In Your Browser | PDFly</title>
-        <meta name="description" content="Convert any text, HTML, or markdown to a PDF in your browser — files are never uploaded. 15 professional templates, 11 page sizes, free REST API with batch generation. No signup, no watermark." />
-        <meta name="keywords" content="text to PDF, HTML to PDF, markdown to PDF, Hindi PDF generator, Arabic PDF, client-side PDF, free PDF API, PDFly" />
-        <meta property="og:title" content="Text to PDF — 15 Templates, Runs In Your Browser | PDFly" />
-        <meta property="og:description" content="Convert text to PDF with PDFly. Files never leave your browser. Free API, batch processing, 15 templates." />
-        <link rel="canonical" href={`${SITE_URL}/text-to-pdf`} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",

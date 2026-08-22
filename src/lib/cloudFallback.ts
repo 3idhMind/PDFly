@@ -143,6 +143,48 @@ async function toResultFile(item: DeliveredItem, fallbackName: string): Promise<
   throw new Error("The server returned no file.");
 }
 
+/* ----------------------------------------------------------- anonymous run */
+
+/**
+ * Vercel refuses a request body over ~4.5 MB, and base64 costs a third on top,
+ * so an anonymous inline job cannot exceed about 3.3 MB however it is framed.
+ * Stated as a real number with a real way out rather than letting the platform
+ * answer with a 413 the user cannot interpret.
+ */
+export const ANON_MAX_BYTES = 3 * 1024 * 1024;
+
+async function runAnonymous(
+  op: CloudOp,
+  files: File[],
+  options: Record<string, unknown>,
+  total: number,
+): Promise<CloudResultFile[]> {
+  if (total > ANON_MAX_BYTES) {
+    throw new Error(
+      `Without an account, cloud processing is limited to ${ANON_MAX_BYTES / (1024 * 1024)} MB per job. ` +
+        `Sign in to raise it to ${CLOUD_MAX_BYTES / (1024 * 1024)} MB, or split your files.`,
+    );
+  }
+
+  const encoded = await Promise.all(
+    files.map(async (f) => ({
+      name: f.name,
+      type: f.type,
+      data: bytesToBase64(new Uint8Array(await f.arrayBuffer())),
+    })),
+  );
+
+  const out = await postJson<{ files?: { name: string; data: string; type?: string }[] }>(
+    "/api/pdf/fallback",
+    { op, files: encoded, options },
+  );
+
+  return (out.files ?? []).map((f) => ({
+    name: f.name,
+    blob: base64ToBlob(f.data, f.type || "application/pdf"),
+  }));
+}
+
 /* --------------------------------------------------------------------- run */
 
 export async function runInCloud(
@@ -151,6 +193,23 @@ export async function runInCloud(
   options: Record<string, unknown> = {},
 ): Promise<CloudResultFile[]> {
   const total = files.reduce((s, f) => s + f.size, 0);
+  const token = await getIdToken().catch(() => null);
+
+  /*
+   * Signed-out visitors take a different route, and it is not an optimisation.
+   *
+   * The chunked path parks the file in object storage so it can get past the
+   * request-body cap, and the operations that resolve a `ref:` all require a
+   * credential — an anonymous caller gets a 401 from every one of them. The
+   * anonymous route is /api/pdf/fallback, which is deliberately authless and
+   * deliberately zero-retention: it holds nothing, writes nothing and returns
+   * the result in the same response. That contract is the reason it can run
+   * without an account at all, and it is also why it cannot accept a stored
+   * ref. So anonymous jobs stay inline, and are bounded by what one request
+   * body can carry rather than by the tier ceiling.
+   */
+  if (!token) return runAnonymous(op, files, options, total);
+
   if (total > CLOUD_MAX_BYTES) {
     throw new Error(
       `Cloud processing is limited to ${CLOUD_MAX_BYTES / (1024 * 1024)} MB per job. ` +

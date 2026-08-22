@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { SEOHead } from "@/components/SEOHead";
 import { SITE_URL } from "@/lib/config";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -127,18 +127,10 @@ const CURRENT_LIMITS = [
 ];
 
 export default function Pricing() {
-  const canonical = `${SITE_URL}/pricing`;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Helmet>
-        <title>Pricing — Free PDF Tools and a Free API Tier | PDFly</title>
-        <meta
-          name="description"
-          content={`Every PDFly browser tool is free with no account, no watermark and no limits. The REST API has a free tier of ${FREE_TIER_QUOTA} documents a month with 10 MB jobs. Growth and Enterprise plans are priced on request.`}
-        />
-        <link rel="canonical" href={canonical} />
-      </Helmet>
+      <SEOHead />
 
       <Header />
 

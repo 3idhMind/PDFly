@@ -12,6 +12,13 @@
   ],
   "trailingSlash": false,
   "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/analytics",
+      "destination": "/settings",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/health",

@@ -34,12 +34,7 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead
-        title="PDFly Blog — PDF Generation Guides, Tutorials & Tips | 3idhMinds"
-        description="Learn about PDF generation, REST APIs, non-Latin script rendering, batch processing, and more. Free tutorials and guides by 3idhMinds."
-        keywords="PDF generation blog, HTML to PDF tutorial, PDF API guide, Hindi PDF, Arabic PDF, invoice PDF, certificate PDF, 3idhMinds blog"
-        canonical={`${SITE_URL}/blog`}
-      />
+      <SEOHead keywords="PDF generation blog, HTML to PDF tutorial, PDF API guide, Hindi PDF, Arabic PDF, invoice PDF, certificate PDF, 3idhMinds blog" />
       <Helmet>
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",

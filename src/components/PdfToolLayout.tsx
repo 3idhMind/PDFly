@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { guidesForSlug } from "@/lib/toolsData";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export const PdfToolLayout = ({ slug, title, metaTitle, metaDescription, tagline, faqs, howToSteps, children }: Props) => {
+  const guides = guidesForSlug(slug);
   const canonical = `${SITE_URL}/${slug}`;
   const softwareLd = {
     "@context": "https://schema.org",
@@ -111,6 +113,30 @@ export const PdfToolLayout = ({ slug, title, metaTitle, metaDescription, tagline
                   <summary className="font-medium cursor-pointer">{f.q}</summary>
                   <p className="text-sm text-muted-foreground mt-2">{f.a}</p>
                 </details>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {guides.length > 0 && (
+          /*
+            The other half of the exam cluster. The exam pages have always
+            linked down to the tool; nothing linked back, so someone who
+            arrived at the resizer mid-rejection had no route to the page that
+            explains what the portal actually wants. STRATEGY.md's open item.
+          */
+          <section className="mt-16">
+            <h2 className="text-xl font-display font-bold mb-4">Uploading for an exam?</h2>
+            <div className="grid gap-3 md:grid-cols-2">
+              {guides.map((g) => (
+                <Link
+                  key={g.href}
+                  to={g.href}
+                  className="p-4 rounded-lg border border-border bg-card hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                >
+                  <span className="block text-sm font-medium">{g.label} &rarr;</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">{g.blurb}</span>
+                </Link>
               ))}
             </div>
           </section>

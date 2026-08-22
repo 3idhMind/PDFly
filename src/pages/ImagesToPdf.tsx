@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
-import { SITE_URL } from "@/lib/config";
 import { ImageUploadZone } from "@/components/ImageUploadZone";
 import { ImagePreviewGrid } from "@/components/ImagePreviewGrid";
 import { Button } from "@/components/ui/button";
@@ -150,12 +149,7 @@ const ImagesToPdf = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead
-        title="Image to PDF Converter — Convert 100+ Images to PDF | PDFly"
-        description="Convert JPG, PNG, WebP, HEIC, TIFF, SVG and 25+ image formats into a single PDF. Supports 100+ images, drag-to-reorder, client-side processing. Free & private."
-        keywords="image to PDF, JPG to PDF, PNG to PDF, HEIC to PDF, convert images to PDF, batch image to PDF, free PDF converter"
-        canonical={`${SITE_URL}/images-to-pdf`}
-      />
+      <SEOHead keywords="image to PDF, JPG to PDF, PNG to PDF, HEIC to PDF, convert images to PDF, batch image to PDF, free PDF converter" />
       <Header />
 
       <main className="flex-1">

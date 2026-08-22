@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
+import { SEOHead } from "@/components/SEOHead";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { SITE_URL } from "@/lib/config";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -27,13 +27,8 @@ const supportedFormats = [
 const ImageToPdfFeature = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <SEOHead keywords="image to PDF, JPG to PDF, PNG to PDF, HEIC to PDF, WebP to PDF, RAW to PDF, free image converter, PDFly, bulk image to PDF" />
       <Helmet>
-        <title>Image to PDF Converter — 25+ Formats, 100+ Images | PDFly Free</title>
-        <meta name="description" content="Convert JPG, PNG, HEIC, WebP, RAW and 25+ image formats to PDF free. Upload 100+ images, reorder, customize page size. Client-side processing — fast & private." />
-        <meta name="keywords" content="image to PDF, JPG to PDF, PNG to PDF, HEIC to PDF, WebP to PDF, RAW to PDF, free image converter, PDFly, bulk image to PDF" />
-        <meta property="og:title" content="Image to PDF — 25+ Formats, 100+ Images | PDFly Free" />
-        <meta property="og:description" content="Convert 100+ images to a single PDF. Supports HEIC, WebP, RAW, TIFF and more. Free, fast, private." />
-        <link rel="canonical" href={`${SITE_URL}/image-to-pdf`} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",

@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Plus, ShieldCheck, Lock, Wifi, Sparkles } from "lucide-react";
 import { generatePdfsClient } from "@/lib/clientPdfGenerator";
 import { SEOHead } from "@/components/SEOHead";
-import { SITE_URL } from "@/lib/config";
 
 const createDoc = (title = "Untitled Document"): DocumentSection => ({
   id: crypto.randomUUID(),
@@ -116,12 +115,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead
-        title="Text to PDF — Free Online Text to PDF Converter | PDFly"
-        description="Convert text to PDF free in your browser. 15 templates, 11 page sizes, no upload, no watermark, no signup for basic use."
-        canonical={`${SITE_URL}/app`}
-
-      />
+      <SEOHead />
       <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl flex-1">

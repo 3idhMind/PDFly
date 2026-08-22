@@ -4,12 +4,11 @@ import { SEOHead } from "@/components/SEOHead";
 import { Card } from "@/components/ui/card";
 import { Scale } from "lucide-react";
 import { Link } from "react-router-dom";
-import { SITE_URL } from "@/lib/config";
 
 const TermsOfService = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <SEOHead title="Terms of Service — PDFly by 3idhMinds" description="PDFly terms of service. Usage guidelines, API terms, and service conditions." keywords="PDFly terms, PDF generator terms of service, 3idhMinds terms" canonical={`${SITE_URL}/terms`} />
+      <SEOHead keywords="PDFly terms, PDF generator terms of service, 3idhMinds terms" />
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-4xl flex-1">
         <div className="mb-8">

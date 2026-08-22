@@ -23,7 +23,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Helmet } from "react-helmet-async";
+import { SEOHead } from "@/components/SEOHead";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { StorageNotice } from "@/components/StorageNotice";
@@ -32,7 +32,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SITE_URL } from "@/lib/config";
 import {
   ENDPOINTS,
   GROUPS,
@@ -252,14 +251,7 @@ export default function Docs() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Helmet>
-        <title>API Documentation | PDFly</title>
-        <meta
-          name="description"
-          content="PDFly REST API reference. Generate, merge, split, compress and convert PDFs over HTTP. Free tier, no card required."
-        />
-        <link rel="canonical" href={`${SITE_URL}/docs`} />
-      </Helmet>
+      <SEOHead />
 
       <Header />
 
